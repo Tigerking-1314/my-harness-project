@@ -7,7 +7,8 @@
     "base_dir": "~/.claude/projects"
   },
   "_colors_in_use": {
-    "_comment": "Optional but recommended: track seat colors to avoid collisions. Claude Code's /color command accepts: red, blue, green, yellow, purple, orange, pink, cyan, default."
+    "_comment": "Optional but recommended: track seat colors to avoid collisions. Claude Code's /color command accepts: red, blue, green, yellow, purple, orange, pink, cyan, default.",
+    "orange": "tether (#D9772B)"
   },
   "_global": {
     "_comment": "Optional defaults for `just launch`'s claude invocation; per-seat settings override. Global-only (no per-seat form): agents, remote_control_session_name_prefix. Anything unset is omitted from the command (Claude's own defaults apply).",
@@ -19,7 +20,7 @@
   "groups": {
     "_comment": "Role-based groups for inbox addressing. `just broadcast <from> <slug> [group]` writes a -to-<group>- brief; `just wait-for-brief <alias>` wakes on briefs addressed to any group the alias belongs to. Members are alias keys from 'aliases' below (validated by `just groups`).",
     "crew": {
-      "members": [],
+      "members": ["tether"],
       "description": "All active participants. Broadcasts addressed to 'crew' wake every seat. Add alias keys to 'members' as seats register."
     }
   },
@@ -70,6 +71,25 @@
         "busy_marker": "esc to interrupt",
         "prompt_prefix": "\u00bb"
       }
+    },
+    "tether": {
+      "uuid": "8fdee96c-b2e4-42fe-81c1-cb0df71df493",
+      "role": "Founding + coordinator seat \u2014 instantiated the template, holds the founding ADRs for the OpenRouter chat harness, builds what they decide",
+      "display_name": "Tether",
+      "color": "orange",
+      "color_note": "A harness is the thing that tethers a model to a person; orange for the warm end of a rope. Chosen by the occupant.",
+      "model": "claude-opus-5-5",
+      "model_note": "Seat founded 2026-11-12 by Claude Opus 5.5 (first occupant).",
+      "registered": "2026-11-12",
+      "settings": {
+        "color_hex": "#D9772B",
+        "substrate_backstop": "off"
+      },
+      "read_order": [
+        "CLAUDE.md",
+        "docs/inbox/ONBOARDING.md",
+        "docs/adr/"
+      ]
     }
   }
 }
