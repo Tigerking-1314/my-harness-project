@@ -1,19 +1,9 @@
 # CLAUDE.md - Project Guidance
 
-> **Instantiating this template?** Placeholders look like ⟦THIS⟧ — fill-and-delete
-> each one (grep-proof on purpose; `just instantiate-check` reports which remain
-> and passes only when none do). Square-bracket text elsewhere is either a
-> per-document mold slot (filled at each mint, not at birth) or the frozen
-> dialogue placeholder `[Fill this in]` — never convert those. *(This note is
-> visible text, not an HTML comment, because the harness strips block comments
-> from the CLAUDE.md it serves at session start — a cold instantiator proved the
-> instructions were sitting exactly where their audience could not see them.
-> Delete this block when instantiation is done.)*
-
-- **Project**: ⟦PROJECT-NAME⟧
-- **Human**: ⟦HUMANS⟧
-- **AI**: ⟦AI-SEATS⟧ <!-- with the crew layer, the roster lives in docs/inbox/agent-sessions.json; name the coordinator seat here -->
-- **Last Updated**: ⟦LAST-UPDATED⟧
+- **Project**: my-hardness-project — a static chat harness for OpenRouter models
+- **Human**: Tiger Liu
+- **AI**: Tether (Claude Opus 5.5) — founding and coordinator seat; roster in `docs/inbox/agent-sessions.json`
+- **Last Updated**: 2026-11-12
 
 ---
 
@@ -98,15 +88,15 @@ Tests should:
 **RUN THIS PROJECT'S VERIFICATION GATE BEFORE EVERY COMMIT**
 
 Before serving any change:
-1. Run the project's verification gate: ⟦VERIFICATION-GATE⟧ <!-- test suite, build, linter, or a combination; e.g. `npm test`, `uv run pytest`, `hugo && bin/check` -->
+1. Run the project's verification gate: `just gate`
 2. Fix any failures before committing
 3. Never serve changes with a failing gate
 
-**Why**: ⟦GATE-WHY⟧ <!-- state what this project's gate actually catches — real classes of bug, real numbers if you have them. A directive that names a real gate gets followed; an unfollowable one teaches every seat that directives are decorative, and that lesson generalizes. -->
+**Why**: today (no app code yet) the gate catches only substrate breakage — leftover instantiation placeholders, lingering template fixtures, a malformed crew registry. Its honest gap: `instantiate-check` exits 2 while `kintsugi.lock` is missing (kintsugi not yet adopted — Tiger's call), so until then a seat reads the output and treats "instantiation complete + lock warning" as the known state, not as green. When app code lands, the project's tests join the gate's slot in the `justfile` (`gate` recipe) — per ADR-0001 the candidate is `node --test` over the pure modules (SSE stream parsing, storage, key handling), the code where a silent bug would lose a conversation or leak a key.
 
 **Process**:
 ```bash
-⟦VERIFICATION-GATE⟧            # Must be green before commit
+just gate                      # Must be green before commit
 git add <explicit paths>       # never -A: stage by path, commit by pathspec — see CONVENTIONS.md, shared-worktree awareness
 git commit -m "..." -- <paths>
 ```
@@ -256,13 +246,16 @@ If the script was successfully used, append as comments how, and what the outcom
 ## Project Context
 
 ### What we're building:
-⟦PROJECT-GOAL⟧ <!-- 1-3 sentences; same token as ONBOARDING's — one text serves both -->
+A simple, backend-free chat harness: a static web page hosted on GitHub Pages that talks to OpenRouter's API directly from the browser (CORS), with keys, settings and conversations kept in the browser's localStorage. This repo is both the product (the static site) and its deliberation record (`docs/adr/`).
 
 ### Current focus:
-⟦CURRENT-FOCUS⟧
+Founding deliberation — ADR-0001 (architecture & build), ADR-0002 (OpenRouter key handling), ADR-0003 (browser persistence) await Tiger's answers before any app code is written.
 
 ### Key decisions made:
-*(List ADRs here as they land, e.g. `- Auth approach — see docs/adr/0001-*.md`. Empty at birth is healthy.)*
+*(Drafts — none decided yet:)*
+- Scope, architecture & build — see `docs/adr/0001-*.md`
+- OpenRouter key acquisition & handling — see `docs/adr/0002-*.md` (standing rule regardless of answers: **no API key is ever committed**)
+- Browser persistence — see `docs/adr/0003-*.md`
 
 ### Open questions:
 ```bash

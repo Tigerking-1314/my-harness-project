@@ -1,6 +1,7 @@
 # Crew Onboarding — read this first if you've been recruited
 
-Welcome to **⟦PROJECT-NAME⟧** — ⟦PROJECT-ONE-LINER⟧ <!-- one line: what this
+Welcome to **my-hardness-project** — a static, backend-free chat page for
+OpenRouter models on GitHub Pages, built by Tiger Liu with Claude seats <!-- one line: what this
 project is and who the human collaborator(s) are -->.
 
 This document captures **80% of what every seat needs to know** so per-recruit
@@ -60,8 +61,7 @@ the tmux hive.
 
 ## 1. What this project is
 
-⟦PROJECT-GOAL⟧ <!-- 1-3 sentences: the goal, the repo's role (product repo?
-coordination layer?), where implementation happens; same token as CLAUDE.md's -->
+A simple, backend-free chat harness: a static web page hosted on GitHub Pages that talks to OpenRouter's API directly from the browser (CORS), with keys, settings and conversations kept in the browser's localStorage. This repo is both the product (the static site) and its deliberation record (`docs/adr/`).
 
 **Read first**, in order:
 1. `CLAUDE.md` — directives, project context, workflow
