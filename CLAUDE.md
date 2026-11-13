@@ -92,7 +92,7 @@ Before serving any change:
 2. Fix any failures before committing
 3. Never serve changes with a failing gate
 
-**Why**: today (no app code yet) the gate catches only substrate breakage — leftover instantiation placeholders, lingering template fixtures, a malformed crew registry. Its honest gap: `instantiate-check` exits 2 while `kintsugi.lock` is missing (kintsugi not yet adopted — Tiger's call), so until then a seat reads the output and treats "instantiation complete + lock warning" as the known state, not as green. When app code lands, the project's tests join the gate's slot in the `justfile` (`gate` recipe) — per ADR-0001 the candidate is `node --test` over the pure modules (SSE stream parsing, storage, key handling), the code where a silent bug would lose a conversation or leak a key.
+**Why**: the gate runs `node --test` over `site/*.js` first (ADR-0001 QST-GATE) — the code where a silent bug loses a conversation (storage, quota rollback, import/export), garbles a reply (SSE stream parsing across split network reads), breaks "Connect OpenRouter" (PKCE, pinned to the RFC 7636 test vector), or leaks the key (markdown injection, key absent from exports). Then registry validation, then `instantiate-check`. Known gap: `instantiate-check` exits 2 while `kintsugi.lock` is missing (kintsugi not yet adopted — Tiger's call); until then, "tests green + instantiation complete + lock warning" is the known state, and any *other* failure is red. The UI layer (`site/app.js`) is DOM glue with no automated test — check it in a browser (`just serve`).
 
 **Process**:
 ```bash
@@ -249,10 +249,10 @@ If the script was successfully used, append as comments how, and what the outcom
 A simple, backend-free chat harness: a static web page hosted on GitHub Pages that talks to OpenRouter's API directly from the browser (CORS), with keys, settings and conversations kept in the browser's localStorage. This repo is both the product (the static site) and its deliberation record (`docs/adr/`).
 
 ### Current focus:
-Founding deliberation — ADR-0001 (architecture & build), ADR-0002 (OpenRouter key handling), ADR-0003 (browser persistence) await Tiger's answers before any app code is written.
+v1 of the chat harness is built (`site/`, tests in `tests/`, deploy via `.github/workflows/pages.yml`) per the accepted ADRs 0001–0003. Next: first real-browser run and the PKCE connect spike from a `github.io` origin; ADR-0001 QST-NEW-NAME (repo rename) is open.
 
 ### Key decisions made:
-*(Drafts — none decided yet:)*
+*(All accepted 2026-11-12:)*
 - Scope, architecture & build — see `docs/adr/0001-*.md`
 - OpenRouter key acquisition & handling — see `docs/adr/0002-*.md` (standing rule regardless of answers: **no API key is ever committed**)
 - Browser persistence — see `docs/adr/0003-*.md`
