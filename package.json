@@ -1,0 +1,10 @@
+{
+  "name": "chat-harness",
+  "private": true,
+  "description": "Static, backend-free chat page for OpenRouter models (see docs/adr/0001-0003). No dependencies, no build step.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test \"tests/*.test.js\"",
+    "serve": "python3 -m http.server 8000 --directory site"
+  }
+}

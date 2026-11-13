@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- ADR-0002: the API key lives in this origin's localStorage, so nothing but
+       this site's own scripts may run, and the page may only talk to OpenRouter. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src https://openrouter.ai; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Chat Harness</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <div class="app" id="app">
+    <aside class="sidebar" aria-label="Conversations">
+      <button id="new-chat" class="primary wide" type="button">+ New chat</button>
+      <nav id="conv-list" class="conv-list"></nav>
+      <div class="sidebar-foot">
+        <button id="export-btn" type="button">Export</button>
+        <label class="button" for="import-file">Import</label>
+        <input type="file" id="import-file" accept="application/json,.json" hidden>
+      </div>
+    </aside>
+
+    <main class="chat">
+      <header class="topbar">
+        <button id="toggle-sidebar" class="icon" type="button" aria-label="Show conversations">☰</button>
+        <input id="model" class="model" list="model-list" spellcheck="false" autocomplete="off" aria-label="Model" placeholder="model id, e.g. openrouter/auto">
+        <datalist id="model-list"></datalist>
+        <button id="toggle-settings" type="button" aria-expanded="false" aria-controls="settings">Settings</button>
+        <span id="key-badge" class="badge"></span>
+      </header>
+
+      <section id="settings" class="settings" hidden>
+        <div class="settings-group">
+          <h2>OpenRouter key</h2>
+          <p id="key-state" class="muted"></p>
+          <div class="row">
+            <button id="connect" class="primary" type="button">Connect OpenRouter</button>
+            <button id="forget-key" type="button">Forget key</button>
+          </div>
+          <details>
+            <summary>I have a key — paste it instead</summary>
+            <form id="paste-form" class="row">
+              <input id="paste-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-or-…" aria-label="OpenRouter API key">
+              <button type="submit">Save key</button>
+            </form>
+          </details>
+          <p class="muted small">The key is stored only in this browser and sent only to openrouter.ai.</p>
+        </div>
+        <div class="settings-group">
+          <h2>This conversation</h2>
+          <label for="system-prompt">System prompt</label>
+          <textarea id="system-prompt" rows="3" placeholder="(none)"></textarea>
+          <div class="row">
+            <label>Temperature <input id="temperature" type="number" min="0" max="2" step="0.1" placeholder="default"></label>
+            <label>Max tokens <input id="max-tokens" type="number" min="1" step="1" placeholder="default"></label>
+          </div>
+        </div>
+      </section>
+
+      <div id="messages" class="messages" aria-live="polite"></div>
+      <div id="notice" class="notice" role="status" hidden></div>
+
+      <form id="composer" class="composer">
+        <textarea id="input" rows="2" placeholder="Message — Enter to send, Shift+Enter for a new line" aria-label="Message"></textarea>
+        <button id="send" class="primary" type="submit">Send</button>
+        <button id="stop" type="button" hidden>Stop</button>
+      </form>
+    </main>
+  </div>
+</body>
+</html>

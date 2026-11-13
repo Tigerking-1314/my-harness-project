@@ -520,14 +520,22 @@ unanswered:
 # The day-one verification gate (porthole item 16): real checks that exist at
 # birth, plus a marked slot for the project's own gate once it has one.
 [group('status')]
-[doc("Day-one gate: instantiate-check + registry validation (+ your project gate — edit me)")]
+[doc("Gate: app unit tests + registry validation + instantiate-check")]
 gate:
     #!/usr/bin/env bash
     set -euo pipefail
-    just instantiate-check
+    # Project gate (ADR-0001 QST-GATE A): unit tests over site/*.js, zero deps.
+    # Runs FIRST so a substrate warning below can never hide a red test.
+    node --test "tests/*.test.js"
     python3 scripts/groups-lookup.py --validate
-    # ADD YOUR PROJECT'S OWN GATE HERE when it exists (test suite, build, linter)
-    echo "✅ gate green (day-one checks; project gate slot above)"
+    just instantiate-check
+    echo "✅ gate green"
+
+# Serve the static site locally at http://localhost:8000 (ADR-0001: no build step)
+[group('status')]
+[doc("Serve site/ locally on port 8000")]
+serve:
+    python3 -m http.server 8000 --directory site
 
 # Is this instance fully instantiated? Greps for remaining ⟦SIGIL⟧ placeholders
 # (the closed registry: docs/adr/templates/placeholders.yaml) and warns on
