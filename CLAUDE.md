@@ -1,6 +1,6 @@
 # CLAUDE.md - Project Guidance
 
-- **Project**: my-hardness-project — a static chat harness for OpenRouter models
+- **Project**: my-harness-project — a static chat harness for OpenRouter models (live: https://tigerking-1314.github.io/my-harness-project/)
 - **Human**: Tiger Liu
 - **AI**: Tether (Claude Opus 5.5) — founding and coordinator seat; roster in `docs/inbox/agent-sessions.json`
 - **Last Updated**: 2026-11-12
@@ -249,7 +249,7 @@ If the script was successfully used, append as comments how, and what the outcom
 A simple, backend-free chat harness: a static web page hosted on GitHub Pages that talks to OpenRouter's API directly from the browser (CORS), with keys, settings and conversations kept in the browser's localStorage. This repo is both the product (the static site) and its deliberation record (`docs/adr/`).
 
 ### Current focus:
-v1 of the chat harness is built (`site/`, tests in `tests/`, deploy via `.github/workflows/pages.yml`) per the accepted ADRs 0001–0003. Next: first real-browser run and the PKCE connect spike from a `github.io` origin; ADR-0001 QST-NEW-NAME (repo rename) is open.
+v1 of the chat harness is built (`site/`, tests in `tests/`, deploy via `.github/workflows/pages.yml`) per the accepted ADRs 0001–0003. Live at https://tigerking-1314.github.io/my-harness-project/ (repo renamed per ADR-0001 QST-NEW-NAME; every push to `main` tests then deploys). Next: Tiger's first live test — especially "Connect OpenRouter" from the `github.io` origin, the one path no test covers.
 
 ### Key decisions made:
 *(All accepted 2026-11-12:)*

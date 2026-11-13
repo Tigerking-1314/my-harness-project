@@ -9,7 +9,7 @@ adr teaching map: the example is not the teaching — these are the up-links fro
 # Static chat harness on GitHub Pages — scope, architecture and build
 
 - **Date**: 2026-11-12
-- **Iteration**: 2
+- **Iteration**: 3
 - **Status**: Accepted
 - **Deciders**: Tiger Liu, Tether (Claude Opus 5.5)
 
@@ -164,9 +164,10 @@ my-harness-project
 ## Action Items
 
 - [x] Answer QST-SCOPE, QST-BUILD, QST-NAME, QST-GATE - Owner: Tiger Liu
-- [ ] Answer QST-NEW-NAME and rename the repo - Owner: Tiger Liu
-- [ ] Enable GitHub Pages (Settings → Pages → Source: GitHub Actions) once the first workflow lands - Owner: Tiger Liu
-- [ ] Scaffold per the answers; wire the test gate into `justfile` - Owner: Tether
+- [x] Answer QST-NEW-NAME (`my-harness-project`) - Owner: Tiger Liu
+- [x] Rename the repo, push, enable GitHub Pages (source: GitHub Actions) — done by Tether on Tiger's go, 2026-11-12; live at https://tigerking-1314.github.io/my-harness-project/ - Owner: Tether
+- [x] Scaffold per the answers; wire the test gate into `justfile` - Owner: Tether
+- [ ] Test the live site end-to-end, including "Connect OpenRouter" (the one path no test covers) - Owner: Tiger Liu
 
 ---
 
@@ -182,6 +183,12 @@ my-harness-project
 - Human: Tiger Liu
 - AI: Tether (Claude Opus 5.5)
 - Outcome: All four recommendations accepted by Tiger in conversation; answers recorded. Build proceeds per the Decision section.
+
+### Iteration 3 (2026-11-12)
+- Trigger: Tiger answered QST-NEW-NAME (`my-harness-project` — option C) and said go for rename + push + Pages
+- Contributors: Tiger Liu, Tether (Claude Opus 5.5)
+- Changes: repo renamed `my-hardness-project` → `my-harness-project`; Pages enabled (build_type: workflow); first deploy green (tests job → deploy job). The old URL `…/my-hardness-project/` now 404s (Pages does not redirect renamed project sites); localStorage is per-origin, so nothing stored is lost by the rename.
+- Outcome: v1 live at https://tigerking-1314.github.io/my-harness-project/
 
 ---
 
