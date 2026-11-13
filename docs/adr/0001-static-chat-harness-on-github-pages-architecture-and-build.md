@@ -9,8 +9,8 @@ adr teaching map: the example is not the teaching — these are the up-links fro
 # Static chat harness on GitHub Pages — scope, architecture and build
 
 - **Date**: 2026-11-12
-- **Iteration**: 1
-- **Status**: Draft
+- **Iteration**: 2
+- **Status**: Accepted
 - **Deciders**: Tiger Liu, Tether (Claude Opus 5.5)
 
 **TL;DR**: Build the harness as a no-build, vanilla-JS static site served by GitHub Pages, scoped as "chat with knobs", with `node --test` over pure modules as the project gate — pending Tiger's answers below.
@@ -54,7 +54,7 @@ Sibling threads chunked from the same dump: key handling → ADR-0002; persisten
 ## Questions
 
 ### QST-SCOPE: How much "harness" is in the chat harness for v1?
-- Status: unanswered
+- Status: answered
 - Why asking: "harness" could mean a plain chat box or a tool for driving/comparing models. The answer sizes the UI, the data model in ADR-0003 (what a saved conversation contains), and how much there is to test. Context: OpenRouter exposes hundreds of models behind one OpenAI-compatible endpoint, so model choice is nearly free to offer.
 - Need: pick a letter (or override — any shape answers)
 
@@ -69,12 +69,12 @@ Options:
 **B — Chat with knobs.** *Rationale*: the dump says "simple", which rules out C as a v1; but "harness" rather than "chat app" suggests Tiger wants control over *how* the model is driven, and B's knobs are each a few lines on top of A (the request body already carries `model`, `messages`, `temperature`; `usage` comes back in the response). D is a natural v2 that B's data model can grow into. *Confidence*: 0.6 — because I'm inferring intent from one word; this is squarely Tiger's call. *If wrong*: if Tiger meant "harness" as in test harness / agent harness (driving models through tasks), this flips to C, and ADR-0002's security posture must be revisited before any tool runs in the page.
 
 **ANS:** (by Tiger Liu)
-[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+B — Chat with knobs. Accepted Tether's recommendation (in conversation, 2026-11-12: "I accept all your recommendations.")
 
 ---
 
 ### QST-BUILD: No-build vanilla JS, or a bundled (Vite/TypeScript) build deployed by Actions?
-- Status: unanswered
+- Status: answered
 - Why asking: decides the repo layout, how GitHub Pages is configured, and what the test gate can run. Context: Pages can either serve a branch folder as-is, or serve an artifact produced by a GitHub Actions workflow.
 - Need: pick a letter (or override — any shape answers)
 
@@ -88,12 +88,12 @@ Options:
 **A — No build.** *Rationale*: the whole app is roughly one page, a streaming `fetch`, a markdown renderer and a storage module — small enough that a build step buys little. It also shrinks the attack surface that matters most here (ADR-0002: anything that runs on the page can read the stored key): with no dependency tree there is no supply chain to audit. And for a first deliberately-built project, "the file you read is the file that runs" keeps the loop short. JSDoc type comments can recover some of B's safety later without a build. *Confidence*: 0.7 — because the app is small today; that is the assumption most likely to change. *If wrong*: if QST-SCOPE lands on C or D, or the UI grows past ~1,500 lines of JS, this flips to B (TypeScript earns its keep once state gets complicated).
 
 **ANS:** (by Tiger Liu)
-[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+A — No build. Accepted Tether's recommendation (in conversation, 2026-11-12: "I accept all your recommendations.")
 
 ---
 
 ### QST-NAME: Keep the repo name `my-hardness-project`, or rename before the URL goes public?
-- Status: unanswered
+- Status: answered
 - Why asking: the project is a *harness*; the repo says *hardness* — possibly a typo, possibly deliberate. On GitHub Pages the repo name becomes the public URL path (`tigerking-1314.github.io/<repo>/`), and renaming after people bookmark it breaks their links — and because localStorage is per-origin (not per-path), a rename keeps the stored data, but a move to a custom domain loses it. Cheapest to settle now.
 - Need: pick a letter (or override — any shape answers)
 
@@ -107,12 +107,12 @@ Options:
 **B — Rename the repo.** *Rationale*: if "hardness" is a typo, it will be in every URL and every record forever; today it costs one rename and nothing has been published. *Confidence*: 0.5 — because I genuinely can't tell whether the name is intended; route to Tiger. *If wrong*: if the name is deliberate (a pun, or just doesn't matter to Tiger), A — and I'll stop noticing it.
 
 **ANS:** (by Tiger Liu)
-[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+B — Rename the repo. Accepted Tether's recommendation (in conversation, 2026-11-12: "I accept all your recommendations.") The new name itself was not given — see the follow-up question.
 
 ---
 
 ### QST-GATE: What is the project's test gate once code exists?
-- Status: unanswered
+- Status: answered
 - Why asking: the Fifth Directive requires a real gate before every commit; CLAUDE.md currently names `just gate` (substrate checks only). The app's riskiest code is invisible in a browser demo: parsing OpenRouter's streamed SSE chunks, saving/loading conversations, and never persisting or logging the key wrongly.
 - Need: pick a letter (or override — any shape answers)
 
@@ -126,13 +126,13 @@ Options:
 **A — Unit gate.** *Rationale*: it pairs with QST-BUILD A (no dependencies) and covers exactly the code where a silent bug costs a conversation or a key; the UI is thin enough to check by eye at this size. *Confidence*: 0.75 — because this is the standard shape for small static apps, though it leaves the DOM layer untested. *If wrong*: if a UI regression ships that a test would have caught (e.g. a send button that silently does nothing), add B.
 
 **ANS:** (by Tiger Liu)
-[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+A — Unit gate (`node --test` over the pure modules, wired into `just gate`). Accepted Tether's recommendation (in conversation, 2026-11-12: "I accept all your recommendations.")
 
 ---
 
 ## Decision
 
-*Pending answers above. Provisional shape, if all recommendations are accepted:*
+*Accepted 2026-11-12 (all recommendations, Tiger Liu): B chat-with-knobs · A no build · B rename · A unit gate.*
 
 - `site/index.html`, `site/app.js`, `site/*.js` modules (`openrouter.js` — request + SSE stream parsing; `store.js` — persistence per ADR-0003; `keys.js` — per ADR-0002), `site/style.css`.
 - A GitHub Actions workflow publishes `site/` to Pages (keeps docs, ADRs and tests out of the served site).
@@ -140,9 +140,31 @@ Options:
 
 ---
 
+## Open Follow-ups
+
+### QST-NEW-NAME: What should the repo be renamed to?
+- Status: unanswered
+- Why asking: QST-NAME was answered "B — rename", but the name itself wasn't given. The repo name becomes the public URL path (`tigerking-1314.github.io/<name>/`). The code doesn't depend on it (all paths are relative, and the OAuth callback URL is computed from the page's own address), so building proceeds meanwhile. Renaming is one click in GitHub → Settings → General, or `gh repo rename <name>`; the local git remote should then be updated.
+- Need: pick a letter (or override — any name answers)
+
+Options:
+- **A — `chat-harness`**: says what it is; URL `…github.io/chat-harness/`.
+- **B — `harness`**: shortest; URL `…github.io/harness/`.
+- **C — `my-harness-project`**: closest to the current name, typo fixed.
+
+**Recommendation**: (by Tether, Claude Opus 5.5, 2026-11-12)
+
+**A — `chat-harness`.** *Rationale*: a URL other people may see should say what the page is; "harness" alone is ambiguous (ADR-0001 QST-SCOPE needed a question just to pin its meaning). *Confidence*: 0.5 — because naming is taste, and it's yours. *If wrong*: if you'd rather keep continuity with the name you chose, C.
+
+**ANS:** (by Tiger Liu)
+[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+
+---
+
 ## Action Items
 
-- [ ] Answer QST-SCOPE, QST-BUILD, QST-NAME, QST-GATE - Owner: Tiger Liu
+- [x] Answer QST-SCOPE, QST-BUILD, QST-NAME, QST-GATE - Owner: Tiger Liu
+- [ ] Answer QST-NEW-NAME and rename the repo - Owner: Tiger Liu
 - [ ] Enable GitHub Pages (Settings → Pages → Source: GitHub Actions) once the first workflow lands - Owner: Tiger Liu
 - [ ] Scaffold per the answers; wire the test gate into `justfile` - Owner: Tether
 
@@ -155,6 +177,11 @@ Options:
 - Contributors: Tether (Claude Opus 5.5)
 - Changes: chunked the dump into three ADRs (this, 0002, 0003); four questions minted here
 - Outcome: Draft
+
+### Iteration 2 (2026-11-12)
+- Human: Tiger Liu
+- AI: Tether (Claude Opus 5.5)
+- Outcome: All four recommendations accepted by Tiger in conversation; answers recorded. Build proceeds per the Decision section.
 
 ---
 
