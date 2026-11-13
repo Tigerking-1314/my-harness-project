@@ -143,7 +143,7 @@ A — Unit gate (`node --test` over the pure modules, wired into `just gate`). A
 ## Open Follow-ups
 
 ### QST-NEW-NAME: What should the repo be renamed to?
-- Status: unanswered
+- Status: answered
 - Why asking: QST-NAME was answered "B — rename", but the name itself wasn't given. The repo name becomes the public URL path (`tigerking-1314.github.io/<name>/`). The code doesn't depend on it (all paths are relative, and the OAuth callback URL is computed from the page's own address), so building proceeds meanwhile. Renaming is one click in GitHub → Settings → General, or `gh repo rename <name>`; the local git remote should then be updated.
 - Need: pick a letter (or override — any name answers)
 
@@ -157,7 +157,7 @@ Options:
 **A — `chat-harness`.** *Rationale*: a URL other people may see should say what the page is; "harness" alone is ambiguous (ADR-0001 QST-SCOPE needed a question just to pin its meaning). *Confidence*: 0.5 — because naming is taste, and it's yours. *If wrong*: if you'd rather keep continuity with the name you chose, C.
 
 **ANS:** (by Tiger Liu)
-[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+my-harness-project
 
 ---
 
