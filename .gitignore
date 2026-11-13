@@ -7,3 +7,6 @@
 # Python temporary files
 __pycache__/
 *.py[cod]
+
+# ADR Manager extension's local drafts (per-machine working state, not substrate)
+docs/adr/.working/
