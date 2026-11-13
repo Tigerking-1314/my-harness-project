@@ -147,6 +147,8 @@ describe('describeHttpError', () => {
 describe('OAuth PKCE', () => {
   test('S256 challenge matches the RFC 7636 Appendix B test vector', async () => {
     // If this is wrong, OpenRouter rejects every key exchange.
+    // Expected value checked against https://www.rfc-editor.org/rfc/rfc7636.txt Appendix B
+    // on 2026-11-12 — NOT from memory (see docs/vignettes/2026-11-12-when-the-red-test-is-wrong.md).
     assert.equal(
       await challengeFor('dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk'),
       'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
