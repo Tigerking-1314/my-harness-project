@@ -9,8 +9,8 @@ adr teaching map: the example is not the teaching — these are the up-links fro
 # Road-trip assistant — connecting the chat page to roadtrip-memory
 
 - **Date**: 2026-11-19
-- **Iteration**: 1
-- **Status**: Draft
+- **Iteration**: 2
+- **Status**: Accepted
 - **Deciders**: Tiger Liu, Tether (Claude Opus 5.5)
 
 **TL;DR**: Let the chat page use the roadtrip-memory MCP server directly from the browser. This needs three things settled first: how the page reaches the server, who is allowed to use the server, and how "never save without my OK" is enforced.
@@ -58,7 +58,7 @@ adr teaching map: the example is not the teaching — these are the up-links fro
 ## Questions
 
 ### QST-MCP-BRIDGE: How should the page get through to your memory server?
-- Status: unanswered
+- Status: answered
 - Why asking: today the browser blocks the chat page from talking to `your-first-memory-00di.onrender.com`. The server never says "web pages from tigerking-1314.github.io are allowed" (it answers the browser's "may I?" check with `405`). Something has to change, and where we change it decides how much code there is and where it lives.
 - Need: pick a letter (or override — any shape answers)
 
@@ -72,12 +72,12 @@ Options:
 **A — Open the door for your page only.** *Rationale*: the server already speaks MCP (`mcp.run(transport="streamable-http")` in `server.py`), and FastMCP runs on Starlette, whose standard `CORSMiddleware` covers exactly this case. The page needs only three MCP messages (`initialize`, `tools/list`, `tools/call`). B duplicates the data path, and C adds a service to a project that chose to have none. One detail matters: the allow-list must also let the browser read the `mcp-session-id` header, because MCP uses it to keep a conversation with the server going. *Confidence*: 0.8 — because I verified the server's current behavior and the code, but haven't yet confirmed that the pinned `mcp` 1.x version lets you add middleware cleanly (it may need wrapping the app instead of calling `mcp.run()`). *If wrong*: if adding CORS to FastMCP 1.x turns out to be awkward, or breaks your existing Claude connection, this flips to B (the side door is plain Starlette routes, where CORS is routine).
 
 **ANS:** (by Tiger Liu)
-[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+A — Open the door for your page only (CORS allow-list on the server; the page speaks MCP). Given in conversation, 2026-11-19: "A，B, B".
 
 ---
 
 ### QST-MEMORY-LOCK: Who should be allowed to read and change your favorites?
-- Status: unanswered
+- Status: answered
 - Why asking: the server has no lock. Today anyone who knows its URL can list every place you saved, with your reasons, or add junk entries. That was fine while only Claude knew the URL. Once the chat page uses it, the URL sits in your browser settings, and the page is public. Note that the "allowed sites" fix in QST-MCP-BRIDGE is **not** a lock: it only controls web pages, and any script or terminal can ignore it, as my own test did. One more wrinkle: you also seem to have this server connected to claude.ai (I see a roadtrip-memory connector on your account), and any lock must not shut that connection out.
 - Need: pick a letter (or override — any shape answers)
 
@@ -92,12 +92,12 @@ Options:
 **B — A secret key in the address.** *Rationale*: it closes the real gap (my unauthenticated test call succeeded) for about 10 lines of server code and one environment variable. It also keeps both the chat page and the claude.ai connector working, because both just take a URL. C is the textbook choice, but it risks breaking the claude.ai connector, and A leaves your list one leaked link away from strangers. The known weakness of B is that secrets in URLs can end up in logs, and here those are your own Render logs. *Confidence*: 0.65 — because I haven't checked whether your claude.ai connector can send custom headers (if it can, C is strictly better), and how much privacy matters for this list is your call. *If wrong*: if the claude.ai connector supports custom headers, flip to C; if you don't mind strangers possibly seeing your list, A is a fine choice and saves the work.
 
 **ANS:** (by Tiger Liu)
-[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+B — A secret key in the address (`…/mcp?key=…`), the secret kept in Render's environment, never in git. Given in conversation, 2026-11-19: "A，B, B".
 
 ---
 
 ### QST-SAVE-OK: How do we make sure nothing is saved without your OK?
-- Status: unanswered
+- Status: answered
 - Why asking: your `my-ways` rules say *"Show me the place and reason you're about to save, and wait for my OK. Never save without it."* In the chat page, the model asks for a tool and **the page decides whether to run it**. So we choose whether the "OK" relies on the model behaving, or is built into the page so it can't be skipped. Cheaper models on OpenRouter don't always follow instructions faithfully.
 - Need: pick a letter (or override — any shape answers)
 
@@ -111,7 +111,7 @@ Options:
 **B — A Save button you must click.** *Rationale*: your rules make the OK unconditional ("Never save without it"), and B is the only option where the page, not the model, enforces it. It's also an exact fit for how tool use works here (the page sits between the model's request and the server). The card shows the place and reason, which covers your rule's "show me what you're about to save" step for free. A is fine with a top model and fragile with a cheap one, and C contradicts your own skill file. *Confidence*: 0.85 — because it follows the text of your rules directly; the remaining doubt is whether a click per save will feel tedious on the road. *If wrong*: if the clicks get annoying in real use, add a per-conversation "save without asking" switch. That's a change to your rules, so it would be your call in a new question.
 
 **ANS:** (by Tiger Liu)
-[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+B — A Save button you must click; the page never saves on the model's say-so alone. Given in conversation, 2026-11-19: "A，B, B".
 
 ---
 
@@ -132,9 +132,18 @@ Options:
 
 ---
 
+## Decision
+
+*Accepted 2026-11-19 (Tiger Liu): A open the door for the page only · B secret key in the address · B Save button.*
+
+- **Server** (`~/roadtrip-memory`): the MCP app is wrapped with (1) a key check — every request to `/mcp` must carry `?key=<MEMORY_KEY>`, compared in constant time, otherwise `401`; the key lives only in Render's environment (`MEMORY_KEY`, `sync: false`); and (2) a CORS allow-list for exactly `https://tigerking-1314.github.io`, allowing the `mcp-session-id` / `mcp-protocol-version` headers and exposing `mcp-session-id`. Preflights (`OPTIONS`) are answered by CORS before the key check, because browsers send them without the query's say-so mattering. If `MEMORY_KEY` is unset the server refuses everything (fail closed), which is a deliberate departure from that repo's "missing config is unfinished setup" posture: an unset lock must not mean an open door.
+- **Page**: a per-conversation "Road-trip assistant" switch. When on, the my-ways rules are added to the system prompt and the tools from `tools/list` are offered to the model. `list_favorites` runs immediately. `save_favorite` renders a Save / Don't-save card, and only a click calls the server. The memory URL (with its key) is stored like the OpenRouter key: in this browser only, never exported, never committed. CSP `connect-src` gains `https://your-first-memory-00di.onrender.com`.
+
+---
+
 ## Action Items
 
-- [ ] Answer QST-MCP-BRIDGE, QST-MEMORY-LOCK, QST-SAVE-OK; glance at the assumptions - Owner: Tiger Liu
+- [x] Answer QST-MCP-BRIDGE, QST-MEMORY-LOCK, QST-SAVE-OK; glance at the assumptions - Owner: Tiger Liu
 - [ ] Server changes in `~/roadtrip-memory` per the answers (its own ADR there) + redeploy - Owner: Tether, with Tiger's go for the push
 - [ ] Page: road-trip mode, MCP client, tool loop, Save card, tests - Owner: Tether
 
@@ -147,6 +156,11 @@ Options:
 - Contributors: Tether (Claude Opus 5.5)
 - Changes: read roadtrip-memory's code and rules; probed the live server (CORS blocked, no auth); minted three questions
 - Outcome: Draft
+
+### Iteration 2 (2026-11-19)
+- Human: Tiger Liu
+- AI: Tether (Claude Opus 5.5)
+- Outcome: Tiger answered A, B, B (all three match the recommendations). Assumptions not contested. Build proceeds: server change in ~/roadtrip-memory, page changes here.
 
 ---
 
