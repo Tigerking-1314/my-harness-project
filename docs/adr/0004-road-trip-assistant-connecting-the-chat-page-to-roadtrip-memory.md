@@ -146,8 +146,8 @@ B — A Save button you must click; the page never saves on the model's say-so a
 - [x] Answer QST-MCP-BRIDGE, QST-MEMORY-LOCK, QST-SAVE-OK; glance at the assumptions - Owner: Tiger Liu
 - [x] Server changes in `~/roadtrip-memory` per the answers (its ADR-0006) - Owner: Tether
 - [x] Page: road-trip mode, MCP client, tool loop, Save card, tests - Owner: Tether
-- [ ] Set `MEMORY_KEY` on Render (a long random secret) **before** the server push - Owner: Tiger Liu
-- [ ] Push roadtrip-memory (Render redeploys), then this repo (Pages redeploys) - Owner: Tether, on Tiger's go
+- [x] Set `MEMORY_KEY` on Render (a long random secret) **before** the server push - Owner: Tiger Liu (confirmed 2026-11-19: live server answers a keyless call with 401, not the unset-key 503)
+- [x] Push roadtrip-memory (Render redeploys), then this repo (Pages redeploys) - Owner: Tether, on Tiger's "go", 2026-11-19 — live preflight from the page's origin now 200; Pages deploy green
 - [ ] Update the claude.ai connector URL to `…/mcp?key=…`; paste the same address into the page's Settings - Owner: Tiger Liu
 
 ---
