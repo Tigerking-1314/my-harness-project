@@ -48,6 +48,27 @@ describe('buildChatBody', () => {
     assert.equal('max_tokens' in body, false);
   });
 
+  test('tools and a tool-call round trip are passed through in OpenAI format (ADR-0004)', () => {
+    const tools = [{ type: 'function', function: { name: 'list_favorites', parameters: { type: 'object' } } }];
+    const calls = [{ id: 'c1', type: 'function', function: { name: 'list_favorites', arguments: '{}' } }];
+    const body = buildChatBody({
+      model: 'm',
+      tools,
+      messages: [
+        { role: 'user', content: 'where to stop?' },
+        { role: 'assistant', content: '', tool_calls: calls },
+        { role: 'tool', tool_call_id: 'c1', content: '#1 Big Sur' },
+      ],
+    });
+    assert.deepEqual(body.tools, tools);
+    assert.deepEqual(body.messages[1], { role: 'assistant', content: '', tool_calls: calls });
+    assert.deepEqual(body.messages[2], { role: 'tool', content: '#1 Big Sur', tool_call_id: 'c1' });
+  });
+
+  test('a plain chat sends no tools field', () => {
+    assert.equal('tools' in buildChatBody({ model: 'm', messages: [], tools: [] }), false);
+  });
+
   test('temperature 0 is a real setting, not "unset"', () => {
     assert.equal(buildChatBody({ model: 'm', messages: [], temperature: 0 }).temperature, 0);
   });
@@ -78,6 +99,20 @@ describe('SSE parsing', () => {
     const p = createSSEParser();
     const events = p.push(sse({ error: { code: 502, message: 'Provider returned error' }, choices: [] }));
     assert.deepEqual(events, [{ type: 'error', message: 'Provider returned error' }]);
+  });
+
+  test('tool-call fragments and the finish reason are surfaced (ADR-0004)', () => {
+    const p = createSSEParser();
+    const events = p.push(
+      sse({ choices: [{ delta: { tool_calls: [{ index: 0, id: 'c1', type: 'function', function: { name: 'list_favorites', arguments: '' } }] } }] }) +
+      sse({ choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: '{}' } }] } }] }) +
+      sse({ choices: [{ delta: {}, finish_reason: 'tool_calls' }] }),
+    );
+    assert.deepEqual(events, [
+      { type: 'tool_call', index: 0, id: 'c1', name: 'list_favorites', arguments: '' },
+      { type: 'tool_call', index: 0, id: undefined, name: undefined, arguments: '{}' },
+      { type: 'finish', reason: 'tool_calls' },
+    ]);
   });
 
   test('the final usage chunk (tokens + cost) is surfaced with the actual model', () => {

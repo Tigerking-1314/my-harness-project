@@ -18,11 +18,17 @@ export class OpenRouterError extends Error {
  * `messages` is the visible history ([{role, content}]); the per-conversation
  * system prompt is prepended here so it is never stored as a chat bubble.
  */
-export function buildChatBody({ model, messages, systemPrompt, temperature, maxTokens }) {
+export function buildChatBody({ model, messages, systemPrompt, temperature, maxTokens, tools }) {
   const out = [];
   if (systemPrompt && systemPrompt.trim()) out.push({ role: 'system', content: systemPrompt });
-  for (const m of messages) out.push({ role: m.role, content: m.content });
+  for (const m of messages) {
+    const msg = { role: m.role, content: m.content };
+    if (m.tool_calls) msg.tool_calls = m.tool_calls;
+    if (m.tool_call_id) msg.tool_call_id = m.tool_call_id;
+    out.push(msg);
+  }
   const body = { model, messages: out, stream: true, usage: { include: true } };
+  if (tools && tools.length) body.tools = tools;
   if (typeof temperature === 'number' && Number.isFinite(temperature)) body.temperature = temperature;
   if (Number.isInteger(maxTokens) && maxTokens > 0) body.max_tokens = maxTokens;
   return body;
@@ -34,8 +40,16 @@ export function interpretChunk(obj) {
     return [{ type: 'error', message: obj.error.message || 'The model provider reported an error mid-stream.' }];
   }
   const events = [];
-  const delta = obj?.choices?.[0]?.delta?.content;
-  if (delta) events.push({ type: 'delta', content: delta });
+  const choice = obj?.choices?.[0];
+  const delta = choice?.delta;
+  if (delta?.content) events.push({ type: 'delta', content: delta.content });
+  if (Array.isArray(delta?.tool_calls)) {
+    // streamed in fragments: the id/name usually first, the JSON arguments in pieces (ADR-0004)
+    for (const tc of delta.tool_calls) {
+      events.push({ type: 'tool_call', index: tc.index ?? 0, id: tc.id, name: tc.function?.name, arguments: tc.function?.arguments });
+    }
+  }
+  if (choice?.finish_reason) events.push({ type: 'finish', reason: choice.finish_reason });
   if (obj?.usage) events.push({ type: 'usage', usage: obj.usage, model: obj.model });
   return events;
 }
@@ -131,13 +145,17 @@ export async function* streamChat({ key, body, signal, appUrl, appTitle, fetchIm
   }
 }
 
-/** Public model list (no key needed). Returns [{id, name}] sorted by id. */
+/** Public model list (no key needed). Returns [{id, name, tools}] sorted by id; `tools` = can use tools. */
 export async function fetchModels(fetchImpl = globalThis.fetch) {
   const res = await fetchImpl(`${API_BASE}/models`);
   if (!res.ok) throw new OpenRouterError(describeHttpError(res.status, await res.text().catch(() => '')), res.status);
   const json = await res.json();
   return (json.data || [])
-    .map((m) => ({ id: m.id, name: m.name || m.id }))
+    .map((m) => ({
+      id: m.id,
+      name: m.name || m.id,
+      tools: Array.isArray(m.supported_parameters) ? m.supported_parameters.includes('tools') : null,
+    }))
     .sort((a, b) => a.id.localeCompare(b.id));
 }
 

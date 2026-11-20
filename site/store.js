@@ -11,6 +11,7 @@ const K = {
   settings: `${PREFIX}settings`,
   index: `${PREFIX}index`,
   key: `${PREFIX}key`,
+  memory: `${PREFIX}memory`, // road-trip memory URL — carries its ?key= secret (ADR-0004)
   conv: (id) => `${PREFIX}conv:${id}`,
 };
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
@@ -20,6 +21,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   systemPrompt: '',
   temperature: null, // null = provider default
   maxTokens: null,
+  roadtrip: false, // road-trip assistant mode (ADR-0004)
 });
 
 export class StorageFullError extends Error {
@@ -37,12 +39,20 @@ function summary(conv) {
   return { id: conv.id, title: conv.title, updatedAt: conv.updatedAt, model: conv.model };
 }
 
+function validMessage(m) {
+  if (!m || typeof m.content !== 'string') return false;
+  if (m.role === 'user') return true;
+  if (m.role === 'assistant') return m.tool_calls === undefined || Array.isArray(m.tool_calls);
+  if (m.role === 'tool') return typeof m.tool_call_id === 'string'; // road-trip memory results (ADR-0004)
+  return false;
+}
+
 function validConversation(c) {
   return (
     c && typeof c === 'object' &&
     typeof c.id === 'string' && ID_RE.test(c.id) &&
     Array.isArray(c.messages) &&
-    c.messages.every((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+    c.messages.every(validMessage)
   );
 }
 
@@ -113,7 +123,19 @@ export function createStore(storage) {
     storage.removeItem(K.key);
   }
 
-  /** Everything worth backing up — never the API key (ADR-0002). */
+  // The memory URL holds a secret too, so it gets the key's treatment:
+  // this browser only, never exported.
+  async function getMemoryUrl() {
+    return storage.getItem(K.memory);
+  }
+  async function setMemoryUrl(url) {
+    write(K.memory, url);
+  }
+  async function forgetMemoryUrl() {
+    storage.removeItem(K.memory);
+  }
+
+  /** Everything worth backing up — never the API key (ADR-0002) nor the memory URL (ADR-0004). */
   async function exportAll() {
     const conversations = readIndex()
       .map((e) => readJSON(K.conv(e.id), null))
@@ -155,6 +177,7 @@ export function createStore(storage) {
     getSettings, saveSettings,
     listConversations, loadConversation, saveConversation, deleteConversation,
     getKey, setKey, forgetKey,
+    getMemoryUrl, setMemoryUrl, forgetMemoryUrl,
     exportAll, importAll,
   };
 }

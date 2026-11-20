@@ -130,6 +130,22 @@ details summary { cursor: pointer; font-size: 13px; color: var(--muted); margin-
 .meta { font-size: 12px; color: var(--muted); margin-top: 4px; }
 .msg-error { font-size: 13px; color: var(--error); margin-top: 4px; }
 
+.settings h2.spaced { margin-top: 18px; }
+.settings label.check { display: flex; gap: 8px; align-items: flex-start; color: var(--text); margin-bottom: 10px; }
+.settings label.check input { margin-top: 4px; }
+#memory-url { flex: 1; min-width: 180px; }
+
+/* road-trip memory (ADR-0004) */
+.tool-note { font-size: 13px; color: var(--muted); padding-left: 10px; border-left: 2px solid var(--border); }
+.confirm-card {
+  border: 1px solid var(--accent); border-radius: 12px; padding: 12px 14px;
+  background: var(--panel);
+}
+.confirm-title { font-weight: 600; margin-bottom: 6px; }
+.confirm-card dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0 0 8px; }
+.confirm-card dt { color: var(--muted); font-size: 13px; }
+.confirm-card dd { margin: 0; overflow-wrap: anywhere; }
+
 .notice { max-width: 780px; margin: 0 auto 8px; padding: 6px 12px; border-radius: 8px; font-size: 13px; width: calc(100% - 32px); }
 .notice.error { color: var(--error); border: 1px solid var(--error); }
 .notice.ok { color: var(--ok); border: 1px solid var(--ok); }

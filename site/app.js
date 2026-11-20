@@ -1,5 +1,5 @@
 // UI wiring for the chat harness. Logic worth testing lives in the imported
-// modules (tests/); this file is DOM glue. Decisions: docs/adr/0001–0003.
+// modules (tests/); this file is DOM glue. Decisions: docs/adr/0001–0004.
 
 import { createStore, DEFAULT_SETTINGS, StorageFullError } from './store.js';
 import {
@@ -7,10 +7,17 @@ import {
   randomVerifier, challengeFor, buildAuthUrl, exchangeCode,
 } from './openrouter.js';
 import { renderMarkdown } from './markdown.js';
+import { createMcpClient, toolResultText } from './mcp.js';
+import {
+  ROADTRIP_PROMPT, MAX_TOOL_ROUNDS, needsConfirmation, toOpenAITools,
+  accumulateToolCall, finalizeToolCalls, parseArgs, historyForApi,
+} from './tools.js';
 
 const APP_TITLE = 'Chat Harness';
 const PKCE_KEY = 'harness:v1:pkce'; // sessionStorage: survives the OpenRouter redirect, dies with the tab
 const NEW_TITLE = 'New chat';
+// Must match the CSP connect-src in index.html (ADR-0004).
+const MEMORY_ORIGINS = ['https://your-first-memory-00di.onrender.com'];
 
 const $ = (id) => document.getElementById(id);
 const el = {
@@ -23,6 +30,8 @@ const el = {
   systemPrompt: $('system-prompt'), temperature: $('temperature'), maxTokens: $('max-tokens'),
   messages: $('messages'), notice: $('notice'),
   composer: $('composer'), input: $('input'), send: $('send'), stop: $('stop'),
+  memoryState: $('memory-state'), memoryForm: $('memory-form'), memoryUrl: $('memory-url'),
+  forgetMemory: $('forget-memory'), roadtrip: $('roadtrip'),
 };
 
 const store = createStore(window.localStorage);
@@ -30,6 +39,8 @@ let settings = { ...DEFAULT_SETTINGS };
 let conversations = [];
 let current = null;
 let streaming = null; // AbortController while a reply streams
+let memory = null; // { url, client, tools } — the road-trip memory connection
+const modelInfo = new Map(); // id → { name, tools } from OpenRouter's model list
 
 const appUrl = () => location.origin + location.pathname;
 
@@ -59,6 +70,7 @@ function newConversation() {
     systemPrompt: settings.systemPrompt,
     temperature: settings.temperature,
     maxTokens: settings.maxTokens,
+    roadtrip: !!settings.roadtrip,
     messages: [],
   };
 }
@@ -110,6 +122,14 @@ function metaLine(m) {
 }
 
 function renderMessage(m) {
+  if (m.role === 'tool') {
+    const note = document.createElement('div');
+    note.className = 'tool-note';
+    note.textContent = m.display || m.content;
+    return note;
+  }
+  // an assistant turn that only asked for tools has nothing to show
+  if (m.role === 'assistant' && !m.content && m.tool_calls?.length && !m.error) return null;
   const wrap = document.createElement('article');
   wrap.className = `msg ${m.role}`;
   const body = document.createElement('div');
@@ -144,7 +164,7 @@ function renderMessages() {
     empty.textContent = 'Start a conversation. Pick any OpenRouter model above.';
     el.messages.replaceChildren(empty);
   } else {
-    el.messages.replaceChildren(...current.messages.map(renderMessage));
+    el.messages.replaceChildren(...current.messages.map(renderMessage).filter(Boolean));
   }
   el.messages.scrollTop = el.messages.scrollHeight;
 }
@@ -154,6 +174,22 @@ function renderParams() {
   el.systemPrompt.value = current.systemPrompt || '';
   el.temperature.value = current.temperature ?? '';
   el.maxTokens.value = current.maxTokens ?? '';
+  el.roadtrip.checked = !!current.roadtrip;
+}
+
+async function renderMemoryStatus() {
+  const url = await store.getMemoryUrl();
+  el.memoryState.textContent = url
+    ? `Memory address saved (server ${new URL(url).host}).`
+    : 'No memory address saved. Paste your server address, including ?key=…, to use road-trip mode.';
+  el.forgetMemory.hidden = !url;
+}
+
+function warnIfModelCantUseTools() {
+  const info = modelInfo.get(current.model);
+  if (current.roadtrip && info && info.tools === false) {
+    notice(`${current.model} can't use tools, so it can't reach your road-trip memory. Pick another model (e.g. openrouter/auto).`, 'error');
+  }
 }
 
 async function renderKeyStatus() {
@@ -236,20 +272,57 @@ async function send(text) {
   const conv = current;
   conv.messages.push({ role: 'user', content: text });
   if (conv.title === NEW_TITLE) conv.title = text.replace(/\s+/g, ' ').trim().slice(0, 48) || NEW_TITLE;
-  const history = conv.messages
-    .filter((m) => m.content.trim() !== '')
-    .map(({ role, content }) => ({ role, content }));
-  const reply = { role: 'assistant', content: '', model: conv.model };
-  conv.messages.push(reply);
-  conv.updatedAt = Date.now();
-  await persist(conv);
-  renderMessages();
 
+  const ctrl = new AbortController();
+  streaming = ctrl;
+  setBusy(true);
+  try {
+    let tools;
+    if (conv.roadtrip) {
+      try {
+        tools = toOpenAITools((await connectMemory()).tools);
+      } catch (e) {
+        notice(`Road-trip memory unavailable — answering without it. ${e.message}`, 'error');
+      }
+    }
+    // The tool loop (ADR-0004): the model may ask for tools; the page runs
+    // them (saves only after a click) and hands results back, a few rounds max.
+    for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+      const reply = { role: 'assistant', content: '', model: conv.model };
+      conv.messages.push(reply);
+      conv.updatedAt = Date.now();
+      await persist(conv);
+      if (current === conv) renderMessages();
+      const calls = await streamReply(conv, reply, key, tools, ctrl.signal);
+      if (!calls.length || ctrl.signal.aborted) break;
+      reply.tool_calls = calls;
+      await persist(conv);
+      for (const call of calls) {
+        const outcome = await runTool(call, ctrl.signal);
+        conv.messages.push({ role: 'tool', tool_call_id: call.id, name: call.function.name, ...outcome });
+        await persist(conv);
+        if (current === conv) renderMessages();
+      }
+      if (ctrl.signal.aborted) break; // Stop pressed while a Save card was open
+      if (round === MAX_TOOL_ROUNDS - 1) notice('Stopped after several memory steps in a row — ask again to continue.', 'info');
+    }
+  } finally {
+    streaming = null;
+    setBusy(false);
+    conv.updatedAt = Date.now();
+    await persist(conv);
+    if (current === conv) renderMessages();
+  }
+}
+
+/** Stream one assistant reply into `reply`; returns the tool calls it asked for (maybe none). */
+async function streamReply(conv, reply, key, tools, signal) {
   let node = el.messages.lastElementChild;
   let scheduled = false;
   const paint = () => {
     scheduled = false;
-    const fresh = renderMessage(reply);
+    if (current !== conv || !node) return;
+    const fresh = renderMessage(reply) || document.createElement('div');
     node.replaceWith(fresh);
     node = fresh;
     el.messages.scrollTop = el.messages.scrollHeight;
@@ -260,20 +333,22 @@ async function send(text) {
       requestAnimationFrame(paint);
     }
   };
-
-  const ctrl = new AbortController();
-  streaming = ctrl;
-  setBusy(true);
+  const calls = [];
   try {
+    const systemPrompt = conv.roadtrip
+      ? [ROADTRIP_PROMPT, conv.systemPrompt].filter((s) => s && s.trim()).join('\n\n')
+      : conv.systemPrompt;
     const body = buildChatBody({
       model: conv.model || DEFAULT_SETTINGS.model,
-      messages: history,
-      systemPrompt: conv.systemPrompt,
+      messages: historyForApi(conv.messages),
+      systemPrompt,
       temperature: conv.temperature,
       maxTokens: conv.maxTokens,
+      tools,
     });
-    for await (const ev of streamChat({ key, body, signal: ctrl.signal, appUrl: appUrl(), appTitle: APP_TITLE })) {
+    for await (const ev of streamChat({ key, body, signal, appUrl: appUrl(), appTitle: APP_TITLE })) {
       if (ev.type === 'delta') reply.content += ev.content;
+      else if (ev.type === 'tool_call') accumulateToolCall(calls, ev);
       else if (ev.type === 'usage') {
         reply.usage = ev.usage;
         if (ev.model) reply.model = ev.model;
@@ -284,13 +359,111 @@ async function send(text) {
     if (e.name === 'AbortError') reply.stopped = true;
     else reply.error = e.message || String(e);
     if (e.status === 401) renderKeyStatus();
-  } finally {
-    streaming = null;
-    setBusy(false);
-    conv.updatedAt = Date.now();
-    await persist(conv);
-    if (current === conv) paint();
+    return [];
   }
+  return reply.error ? [] : finalizeToolCalls(calls);
+}
+
+// ---------- road-trip memory (ADR-0004) ----------
+
+async function withWakeNotice(fn) {
+  const WAKE = 'Waking up your memory server — free servers nap, this can take ~30 seconds…';
+  const timer = setTimeout(() => notice(WAKE, 'info'), 2000);
+  try {
+    return await fn();
+  } finally {
+    clearTimeout(timer);
+    if (el.notice.textContent === WAKE) notice('');
+  }
+}
+
+async function connectMemory() {
+  const url = await store.getMemoryUrl();
+  if (!url) throw new Error('No memory address saved yet — add it under Settings → Road-trip memory.');
+  if (!memory || memory.url !== url) memory = { url, client: createMcpClient({ url }), tools: null };
+  if (!memory.tools) memory.tools = await withWakeNotice(() => memory.client.listTools());
+  return memory;
+}
+
+/** Run one tool call; returns { content (for the model), display (for Tiger) }. */
+async function runTool(call, signal) {
+  const name = call.function.name;
+  const args = parseArgs(call.function.arguments);
+  if (!memory || !memory.tools.some((t) => t.name === name)) {
+    return { content: `Error: there is no tool named ${name}.`, display: `Unknown tool requested: ${name}` };
+  }
+  if (args === null) {
+    return { content: 'Error: the tool arguments were not valid JSON.', display: `${name}: the model sent unreadable arguments` };
+  }
+  if (needsConfirmation(name)) {
+    const approved = await askToConfirm(name, args, signal);
+    if (!approved) {
+      return {
+        content: 'Tiger did not approve this, so nothing was saved. Do not retry unless Tiger asks.',
+        display: name === 'save_favorite' ? `Not saved: ${args.place ?? ''}` : `Not run: ${name}`,
+      };
+    }
+  }
+  try {
+    const text = toolResultText(await withWakeNotice(() => memory.client.callTool(name, args)));
+    const display =
+      name === 'list_favorites' ? 'Checked your road-trip favorites'
+      : name === 'save_favorite' ? `Saved to your favorites: ${args.place} — “${args.reason}”`
+      : `${name}: ${text}`;
+    return { content: text, display: text.startsWith('Error:') ? `Memory error: ${text}` : display };
+  } catch (e) {
+    return { content: `Error: ${e.message}`, display: `Memory error: ${e.message}` };
+  }
+}
+
+/** Show a Save / Don't-save card; resolves true only on Tiger's click (QST-SAVE-OK = B). */
+function askToConfirm(name, args, signal) {
+  return new Promise((resolve) => {
+    const card = document.createElement('div');
+    card.className = 'confirm-card';
+    const title = document.createElement('div');
+    title.className = 'confirm-title';
+    const details = document.createElement('dl');
+    const add = (label, value) => {
+      const dt = document.createElement('dt');
+      dt.textContent = label;
+      const dd = document.createElement('dd');
+      dd.textContent = value;
+      details.append(dt, dd);
+    };
+    if (name === 'save_favorite') {
+      title.textContent = 'Save to your road-trip memory?';
+      add('Place', String(args.place ?? ''));
+      add('Reason', String(args.reason ?? ''));
+    } else {
+      title.textContent = `Allow the assistant to run “${name}” on your memory?`;
+      add('Details', JSON.stringify(args));
+    }
+    const yes = document.createElement('button');
+    yes.type = 'button';
+    yes.className = 'primary';
+    yes.textContent = name === 'save_favorite' ? 'Save' : 'Allow';
+    const no = document.createElement('button');
+    no.type = 'button';
+    no.textContent = name === 'save_favorite' ? 'Don’t save' : 'Don’t allow';
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.append(yes, no);
+    card.append(title, details, row);
+
+    const finish = (answer) => {
+      signal.removeEventListener('abort', onAbort);
+      card.remove();
+      resolve(answer);
+    };
+    const onAbort = () => finish(false);
+    yes.addEventListener('click', () => finish(true));
+    no.addEventListener('click', () => finish(false));
+    signal.addEventListener('abort', onAbort);
+    el.messages.append(card);
+    el.messages.scrollTop = el.messages.scrollHeight;
+    yes.focus();
+  });
 }
 
 // ---------- OpenRouter connect (OAuth PKCE, ADR-0002) ----------
@@ -345,7 +518,51 @@ async function updateParam(field, value) {
   if (current.messages.length) await persist(current);
 }
 
-el.model.addEventListener('change', () => updateParam('model', el.model.value.trim() || DEFAULT_SETTINGS.model).then(renderParams));
+el.model.addEventListener('change', () =>
+  updateParam('model', el.model.value.trim() || DEFAULT_SETTINGS.model).then(() => {
+    renderParams();
+    warnIfModelCantUseTools();
+  }),
+);
+el.roadtrip.addEventListener('change', async () => {
+  await updateParam('roadtrip', el.roadtrip.checked);
+  if (el.roadtrip.checked && !(await store.getMemoryUrl())) {
+    notice('Road-trip mode is on — now paste your memory address under Settings → Road-trip memory.', 'info');
+  } else {
+    warnIfModelCantUseTools();
+  }
+});
+el.memoryForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const raw = el.memoryUrl.value.trim();
+  if (!raw) return;
+  let url;
+  try {
+    url = new URL(raw);
+  } catch {
+    notice('That doesn’t look like a web address.', 'error');
+    return;
+  }
+  if (!MEMORY_ORIGINS.includes(url.origin)) {
+    // the page's security policy (CSP) only allows these servers — see ADR-0004
+    notice(`This page may only talk to ${MEMORY_ORIGINS.join(', ')} (its security policy). Use that server’s address.`, 'error');
+    return;
+  }
+  await store.setMemoryUrl(url.toString());
+  memory = null; // reconnect with the new address
+  el.memoryUrl.value = '';
+  await renderMemoryStatus();
+  notice(
+    url.searchParams.get('key') ? 'Memory address saved in this browser.' : 'Saved — but it has no ?key=…, so a locked server will refuse it.',
+    url.searchParams.get('key') ? 'ok' : 'info',
+  );
+});
+el.forgetMemory.addEventListener('click', async () => {
+  await store.forgetMemoryUrl();
+  memory = null;
+  await renderMemoryStatus();
+  notice('Memory address removed from this browser.', 'ok');
+});
 el.systemPrompt.addEventListener('change', () => updateParam('systemPrompt', el.systemPrompt.value));
 el.temperature.addEventListener('change', () => updateParam('temperature', numberOrNull(el.temperature.value)));
 el.maxTokens.addEventListener('change', () => updateParam('maxTokens', numberOrNull(el.maxTokens.value, { integer: true })));
@@ -425,9 +642,12 @@ async function init() {
   renderMessages();
   renderList();
   await renderKeyStatus();
+  await renderMemoryStatus();
   if (!(await store.getKey())) toggleSettings(true);
   fetchModels()
     .then((models) => {
+      for (const m of models) modelInfo.set(m.id, m);
+      warnIfModelCantUseTools();
       el.modelList.replaceChildren(...models.map((m) => {
         const o = document.createElement('option');
         o.value = m.id;

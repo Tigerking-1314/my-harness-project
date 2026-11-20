@@ -131,6 +131,26 @@ describe('export / import', () => {
     assert.equal(JSON.stringify(data).includes('supersecret'), false);
   });
 
+  test('an export never contains the memory address and its ?key= (ADR-0004)', async () => {
+    const s = createStore(memoryStorage());
+    await s.setMemoryUrl('https://your-first-memory-00di.onrender.com/mcp?key=memsecret123');
+    await s.saveConversation(conv('a', 1));
+    assert.equal(JSON.stringify(await s.exportAll()).includes('memsecret123'), false);
+  });
+
+  test('a road-trip chat with saves in it survives export → import', async () => {
+    const trip = conv('trip', 3, [
+      { role: 'user', content: 'I loved Zion, save it' },
+      { role: 'assistant', content: '', tool_calls: [{ id: 'c1', type: 'function', function: { name: 'save_favorite', arguments: '{}' } }] },
+      { role: 'tool', tool_call_id: 'c1', name: 'save_favorite', content: 'Saved as favorite #4', display: 'Saved: Zion' },
+    ]);
+    const a = createStore(memoryStorage());
+    await a.saveConversation(trip);
+    const b = createStore(memoryStorage());
+    assert.deepEqual(await b.importAll(JSON.parse(JSON.stringify(await a.exportAll()))), { added: 1, updated: 0, skipped: 0 });
+    assert.deepEqual(await b.loadConversation('trip'), trip);
+  });
+
   test('export from one browser, import into another: conversations arrive intact', async () => {
     const laptop = createStore(memoryStorage());
     await laptop.saveConversation(conv('a', 1));

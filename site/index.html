@@ -4,8 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- ADR-0002: the API key lives in this origin's localStorage, so nothing but
-       this site's own scripts may run, and the page may only talk to OpenRouter. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src https://openrouter.ai; base-uri 'none'; form-action 'none'">
+       this site's own scripts may run, and the page may only talk to OpenRouter
+       and (ADR-0004) Tiger's road-trip memory server. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src https://openrouter.ai https://your-first-memory-00di.onrender.com; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>Chat Harness</title>
   <link rel="stylesheet" href="style.css">
@@ -48,9 +49,19 @@
             </form>
           </details>
           <p class="muted small">The key is stored only in this browser and sent only to openrouter.ai.</p>
+          <h2 class="spaced">Road-trip memory</h2>
+          <p id="memory-state" class="muted"></p>
+          <form id="memory-form" class="row">
+            <input id="memory-url" type="password" autocomplete="off" spellcheck="false" placeholder="https://…onrender.com/mcp?key=…" aria-label="Road-trip memory address">
+            <button type="submit">Save address</button>
+          </form>
+          <div class="row">
+            <button id="forget-memory" type="button">Forget address</button>
+          </div>
         </div>
         <div class="settings-group">
           <h2>This conversation</h2>
+          <label class="check"><input id="roadtrip" type="checkbox"> Road-trip assistant — can read your favorites, and save new ones only when you click Save</label>
           <label for="system-prompt">System prompt</label>
           <textarea id="system-prompt" rows="3" placeholder="(none)"></textarea>
           <div class="row">
