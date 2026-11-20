@@ -9,8 +9,8 @@ adr teaching map: the example is not the teaching — these are the up-links fro
 # Geographical memory, map pins, and private location
 
 - **Date**: 2026-11-19
-- **Iteration**: 1
-- **Status**: Draft
+- **Iteration**: 2
+- **Status**: Accepted
 - **Deciders**: Tiger Liu, Tether (Claude Opus 5.5)
 
 **TL;DR**: Give each favorite real coordinates, show the favorites as pins on a map, and let the assistant know which favorites are near you. Two rules are fixed: nothing is saved without your click, and your location stays private.
@@ -57,7 +57,7 @@ adr teaching map: the example is not the teaching — these are the up-links fro
 ## Questions
 
 ### QST-GEO-COORDS: How does a favorite get its coordinates?
-- Status: unanswered
+- Status: answered
 - Why asking: to put a place on a map or measure "how far", the memory needs its latitude and longitude, not just its name. Someone, or something, has to turn "Big Sur" into numbers, and names are ambiguous ("Springfield" exists in 30+ US states). Saves happen from two places, this chat page and claude.ai, and both should get coordinates.
 - Need: pick a letter (or override — any shape answers)
 
@@ -78,12 +78,12 @@ Options:
 *Confidence*: 0.75 — because the policy fits and C covers both clients, but I haven't checked how well Nominatim handles casual names ("the pie diner on Route 66"). *If wrong*: if lookups often miss or pick wrong places in practice, add D as the fallback ("not right? drop the pin yourself") on the page's Save card, which makes it C + D.
 
 **ANS:** (by Tiger Liu)
-[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+C — The memory server looks it up (read-only `find_place`, Nominatim, used from both the page and claude.ai). Given in conversation, 2026-11-19: "C, C, A, A".
 
 ---
 
 ### QST-MAP-STYLE: What should the map view look like?
-- Status: unanswered
+- Status: answered
 - Why asking: "Pinterest-style pins on a map" can mean a real zoomable map, a wall of cards, or both side by side. The choice also decides which outside services the page must load from, and that matters for safety. ADR-0002 keeps the page's security policy tight (`script-src 'self'`) because your OpenRouter key lives in this page's storage.
 - Need: pick a letter (or override — any shape answers)
 
@@ -105,12 +105,12 @@ Options:
 *Confidence*: 0.7 — because the security reasoning is solid, but how it looks on your phone is a taste call I can't make for you. *If wrong*: if the map turns out to matter little in use (you mostly scroll cards), fall back to B and drop the tile server from the security policy; if OSM ever blocks or throttles us, switch tiles to another OSM-based provider (the policy itself points to them).
 
 **ANS:** (by Tiger Liu)
-[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+C — Board + map together (vendored Leaflet, OpenStreetMap tiles with visible credit). Given in conversation, 2026-11-19: "C, C, A, A".
 
 ---
 
 ### QST-PIN-PHOTOS: Do pins carry photos?
-- Status: unanswered
+- Status: answered
 - Why asking: Pinterest is mostly pictures. But your memory server stores text in a free database (Neon) and has no place to keep image files, and photos pulled from other websites load from those websites, which then see your visits.
 - Need: pick a letter (or override — any shape answers)
 
@@ -124,12 +124,12 @@ Options:
 **A — No photos for now.** *Rationale*: the map and coordinates (QST-GEO-COORDS, QST-MAP-STYLE) are the professor's core idea, and photos are an add-on with real costs. B weakens the security policy for every image on the internet, and C needs storage the project doesn't have (roadtrip-memory runs on Neon's free tier, ADR-0001 there). A text card can still *look* Pinterest-like: a colored tile per region, the reason as the caption. *Confidence*: 0.65 — because "Pinterest-style" may mean photos to you, which is exactly what this question is for. *If wrong*: if photos are the point for you, choose C, and we'll write a separate ADR on where images live; B is the quick middle path if you mostly have photos online already.
 
 **ANS:** (by Tiger Liu)
-[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+A — No photos for now. Given in conversation, 2026-11-19: "C, C, A, A".
 
 ---
 
 ### QST-LOCATION-SHARE: When you tap 📍, what may leave your device?
-- Status: unanswered
+- Status: answered
 - Why asking: you asked that location be private. The fixed rules above already guarantee tap-only, never stored, and "near" measured in your browser. What's left: does the **model** get to know anything about where you are? It runs at a provider reached through OpenRouter, outside your device. Telling the model more makes the answers more helpful and the location less private.
 - Need: pick a letter (or override — any shape answers)
 
@@ -148,7 +148,7 @@ Options:
 *Confidence*: 0.7 — because privacy-vs-helpfulness is your trade to make; A is the safe default and easy to loosen later, while B and C can't be "un-shared". *If wrong*: if in real use you keep wanting "what *new* is near me?", move to B, still tap-only and never stored, with the rounding done before anything leaves the page.
 
 **ANS:** (by Tiger Liu)
-[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+A — Nothing leaves: the model is told only which favorites are near, never coordinates or a town. Given in conversation, 2026-11-19: "C, C, A, A".
 
 ---
 
@@ -165,10 +165,21 @@ Options:
 
 ---
 
+## Decision
+
+*Accepted 2026-11-19 (Tiger Liu): C server-side `find_place` · C board + map · A no photos · A nothing leaves. Both fixed rules confirmed. my-ways gets the `find_place` line.*
+
+Shape, per the FIL list above. Two consequences surfaced while planning the build, both following from "location is private":
+
+- **The map never centers on you.** Map images (tiles) are fetched from `tile.openstreetmap.org` for whatever area is on screen. Zooming the map to your position would tell OSM's servers roughly where you are, through the back door. So the map frames your *favorites* only. Tapping 📍 adds distances to the cards, computed on your device, and never moves the map.
+- **Known gap — replies can echo where you were.** The model's *answer* is saved in the chat like any reply, and it may say "Big Sur is 12 km from you". Nothing the page sends is stored, but what the model says back is. Accepted for now: the chat lives only in your browser (ADR-0003), and exports are files you control. If that's not acceptable, a later option is to tell the model not to state distances.
+
+---
+
 ## Action Items
 
-- [ ] Answer QST-GEO-COORDS, QST-MAP-STYLE, QST-PIN-PHOTOS, QST-LOCATION-SHARE; check the fixed rules say what you meant - Owner: Tiger Liu
-- [ ] Decide whether to add the proposed line to my-ways - Owner: Tiger Liu
+- [x] Answer QST-GEO-COORDS, QST-MAP-STYLE, QST-PIN-PHOTOS, QST-LOCATION-SHARE; check the fixed rules say what you meant - Owner: Tiger Liu
+- [x] Decide whether to add the proposed line to my-ways - Owner: Tiger Liu (yes)
 - [ ] Build per answers (server ADR-0007 + page), tests first for: distance math, "location never stored/exported", Save card shows matched place - Owner: Tether
 
 ---
@@ -180,6 +191,11 @@ Options:
 - Contributors: Tether (Claude Opus 5.5)
 - Changes: read the Nominatim and OSM tile policies; fixed rules written from Tiger's message; four questions minted in the professor's order (1 → GEO-COORDS, 2 → MAP-STYLE + PIN-PHOTOS, 3 → LOCATION-SHARE)
 - Outcome: Draft
+
+### Iteration 2 (2026-11-19)
+- Human: Tiger Liu
+- AI: Tether (Claude Opus 5.5)
+- Outcome: Tiger answered C, C, A, A (all match the recommendations), confirmed both fixed rules ("The two fixed rules are right"), and approved adding the find_place line to my-ways. Accepted; build proceeds.
 
 ---
 
