@@ -249,7 +249,7 @@ If the script was successfully used, append as comments how, and what the outcom
 A simple, backend-free chat harness: a static web page hosted on GitHub Pages that talks to OpenRouter's API directly from the browser (CORS), with keys, settings and conversations kept in the browser's localStorage. This repo is both the product (the static site) and its deliberation record (`docs/adr/`).
 
 ### Current focus:
-v1 of the chat harness is built (`site/`, tests in `tests/`, deploy via `.github/workflows/pages.yml`) per the accepted ADRs 0001–0003. Live at https://tigerking-1314.github.io/my-harness-project/ (repo renamed per ADR-0001 QST-NEW-NAME; every push to `main` tests then deploys). Next: Tiger's first live test — especially "Connect OpenRouter" from the `github.io` origin, the one path no test covers.
+v1 of the chat harness is built (`site/`, tests in `tests/`, deploy via `.github/workflows/pages.yml`) per the accepted ADRs 0001–0003. Live at https://tigerking-1314.github.io/my-harness-project/ (repo renamed per ADR-0001 QST-NEW-NAME; every push to `main` tests then deploys). Next: Tiger's first live test — especially "Connect OpenRouter" from the `github.io` origin, the one path no test covers. In progress (ADR-0004): road-trip assistant mode using Tiger's roadtrip-memory MCP server (`~/roadtrip-memory`, its ADR-0006) — built and committed locally; deploy waits on Tiger setting `MEMORY_KEY` on Render. Rules copy: `site/tools.js` `ROADTRIP_PROMPT` mirrors `~/roadtrip-memory/.claude/skills/my-ways/SKILL.md` — keep them in step by hand.
 
 ### Key decisions made:
 *(All accepted 2026-11-12:)*

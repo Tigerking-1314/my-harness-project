@@ -9,7 +9,7 @@ adr teaching map: the example is not the teaching — these are the up-links fro
 # Road-trip assistant — connecting the chat page to roadtrip-memory
 
 - **Date**: 2026-11-19
-- **Iteration**: 2
+- **Iteration**: 3
 - **Status**: Accepted
 - **Deciders**: Tiger Liu, Tether (Claude Opus 5.5)
 
@@ -144,8 +144,11 @@ B — A Save button you must click; the page never saves on the model's say-so a
 ## Action Items
 
 - [x] Answer QST-MCP-BRIDGE, QST-MEMORY-LOCK, QST-SAVE-OK; glance at the assumptions - Owner: Tiger Liu
-- [ ] Server changes in `~/roadtrip-memory` per the answers (its own ADR there) + redeploy - Owner: Tether, with Tiger's go for the push
-- [ ] Page: road-trip mode, MCP client, tool loop, Save card, tests - Owner: Tether
+- [x] Server changes in `~/roadtrip-memory` per the answers (its ADR-0006) - Owner: Tether
+- [x] Page: road-trip mode, MCP client, tool loop, Save card, tests - Owner: Tether
+- [ ] Set `MEMORY_KEY` on Render (a long random secret) **before** the server push - Owner: Tiger Liu
+- [ ] Push roadtrip-memory (Render redeploys), then this repo (Pages redeploys) - Owner: Tether, on Tiger's go
+- [ ] Update the claude.ai connector URL to `…/mcp?key=…`; paste the same address into the page's Settings - Owner: Tiger Liu
 
 ---
 
@@ -161,6 +164,14 @@ B — A Save button you must click; the page never saves on the model's say-so a
 - Human: Tiger Liu
 - AI: Tether (Claude Opus 5.5)
 - Outcome: Tiger answered A, B, B (all three match the recommendations). Assumptions not contested. Build proceeds: server change in ~/roadtrip-memory, page changes here.
+
+### Iteration 3 (2026-11-19)
+- Trigger: build per the Decision section
+- Contributors: Tether (Claude Opus 5.5)
+- Changes: roadtrip-memory `f401889` + `9aa0c31` (lock + CORS, its ADR-0006, 6 pytest cases). Page: `site/mcp.js` (MCP client with re-handshake after a Render nap), `site/tools.js` (tool loop helpers, my-ways prompt copy, default-deny Save gate), road-trip switch + memory address in Settings, Save/Don't-save card, CSP `connect-src` += the memory server; 61 `node --test` cases. Verified the page's client against the real server code run locally (`scripts/ephemeral/2026-11-19-mcp-client-vs-real-server.mjs`).
+- Deviation from the Decision, flagged: the my-ways copy in `ROADTRIP_PROMPT` tells the model to propose saves *by calling the tool* (the Save card is the ask) instead of asking in words and then again by button — same rule, no double prompt. If Tiger edits my-ways, `site/tools.js` must follow by hand (the page can't read the skill file).
+- Not yet verified: a real browser against the deployed server (needs MEMORY_KEY on Render + both pushes).
+- Outcome: built, committed locally; deploy waits on Tiger.
 
 ---
 
