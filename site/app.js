@@ -1,5 +1,5 @@
 // UI wiring for the chat harness. Logic worth testing lives in the imported
-// modules (tests/); this file is DOM glue. Decisions: docs/adr/0001–0004.
+// modules (tests/); this file is DOM glue. Decisions: docs/adr/0001–0007.
 
 import { createStore, DEFAULT_SETTINGS, StorageFullError } from './store.js';
 import {
@@ -12,6 +12,8 @@ import {
   ROADTRIP_PROMPT, MAX_TOOL_ROUNDS, needsConfirmation, toOpenAITools,
   accumulateToolCall, finalizeToolCalls, parseArgs, historyForApi,
 } from './tools.js';
+import { parseCities, nearestCity, describePlace, cityLabel } from './geo.js';
+import { fetchWikiPhoto } from './photo.js';
 
 const APP_TITLE = "Tiger's Road-Trip Assistant"; // ADR-0006; also the X-Title OpenRouter shows
 const PKCE_KEY = 'harness:v1:pkce'; // sessionStorage: survives the OpenRouter redirect, dies with the tab
@@ -32,6 +34,8 @@ const el = {
   composer: $('composer'), input: $('input'), send: $('send'), stop: $('stop'),
   memoryState: $('memory-state'), memoryForm: $('memory-form'), memoryUrl: $('memory-url'),
   forgetMemory: $('forget-memory'), roadtrip: $('roadtrip'), roadtripBadge: $('roadtrip-badge'),
+  showCity: $('show-city'), hereCity: $('here-city'), hereTime: $('here-time'),
+  hereThumb: $('here-thumb'), herePhotoBtn: $('here-photo-btn'),
 };
 
 const store = createStore(window.localStorage);
@@ -40,6 +44,9 @@ let conversations = [];
 let current = null;
 let streaming = null; // AbortController while a reply streams
 let memory = null; // { url, client, tools } — the road-trip memory connection
+// ADR-0007: where you are, for the header. In memory only, never stored or exported:
+// { status: 'locating'|'error'|'found', text, title, city, label, photo, noPhoto }
+let here = null;
 const modelInfo = new Map(); // id → { name, tools } from OpenRouter's model list
 
 const appUrl = () => location.origin + location.pathname;
@@ -159,24 +166,30 @@ function renderMessage(m) {
 
 function renderMessages() {
   if (!current.messages.length) {
-    // ADR-0006: the dashed-road empty state (night road in dark mode).
+    // ADR-0006: the dashed-road empty state (night road in dark mode);
+    // ADR-0007: the city's landmark photo takes its place when there is one.
     const empty = document.createElement('div');
     empty.className = 'empty';
-    const pic = document.createElement('picture');
-    const night = document.createElement('source');
-    night.media = '(prefers-color-scheme: dark)';
-    night.srcset = 'art/road-night.svg';
-    const img = document.createElement('img');
-    img.src = 'art/road.svg';
-    img.alt = '';
-    img.width = 320;
-    img.height = 200;
-    pic.append(night, img);
+    if (here && here.photo) {
+      empty.append(renderPhotoFigure(here.photo));
+    } else {
+      const pic = document.createElement('picture');
+      const night = document.createElement('source');
+      night.media = '(prefers-color-scheme: dark)';
+      night.srcset = 'art/road-night.svg';
+      const img = document.createElement('img');
+      img.src = 'art/road.svg';
+      img.alt = '';
+      img.width = 320;
+      img.height = 200;
+      pic.append(night, img);
+      empty.append(pic);
+    }
     const heading = document.createElement('h2');
     heading.textContent = 'Where to next?';
     const hint = document.createElement('p');
     hint.textContent = 'Ask about routes, stops, or places you loved. Pick any OpenRouter model above.';
-    empty.append(pic, heading, hint);
+    empty.append(heading, hint);
     el.messages.replaceChildren(empty);
   } else {
     el.messages.replaceChildren(...current.messages.map(renderMessage).filter(Boolean));
@@ -648,11 +661,163 @@ el.importFile.addEventListener('change', async () => {
   }
 });
 
+// ---------- where you are (ADR-0007) ----------
+// Coordinates live only inside locate(); the nearest city is found on this device.
+// Nothing here is written to storage. Wikipedia is contacted only from the 📷 button.
+
+let citiesPromise = null;
+let photosPromise = null;
+let locateSeq = 0; // a newer locate() (or switching off) makes older results stale
+
+const loadCities = () => (citiesPromise ||= import('./cities.js').then((m) => parseCities(m.CITIES)));
+const loadPhotos = () => (photosPromise ||= import('./photos.js').then((m) => m.PHOTOS).catch(() => ({})));
+
+const clockFormat = new Intl.DateTimeFormat(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+function tickClock() {
+  el.hereTime.textContent = clockFormat.format(new Date());
+}
+
+function setHere(next) {
+  here = next;
+  renderHere();
+  if (current && !current.messages.length) renderMessages();
+}
+
+function renderHere() {
+  const show = !!(settings.showCity && here);
+  el.hereCity.hidden = !show;
+  el.hereCity.textContent = show ? here.text : '';
+  el.hereCity.title = show ? here.title || '' : '';
+  const photo = show ? here.photo : null;
+  el.hereThumb.hidden = !photo;
+  if (photo) {
+    el.hereThumb.src = photo.src;
+    el.hereThumb.alt = photo.alt;
+    el.hereThumb.title = photo.caption;
+  } else {
+    el.hereThumb.removeAttribute('src');
+  }
+  const canAsk = show && here.status === 'found' && !here.photo && !here.noPhoto;
+  el.herePhotoBtn.hidden = !canAsk;
+  if (canAsk) el.herePhotoBtn.title = `Ask Wikipedia for a photo of ${here.label}. Wikipedia will see the city name.`;
+}
+
+function renderPhotoFigure(photo) {
+  const fig = document.createElement('figure');
+  fig.className = 'empty-photo';
+  const img = document.createElement('img');
+  img.referrerPolicy = 'no-referrer';
+  img.decoding = 'async';
+  img.src = photo.src;
+  img.alt = photo.alt;
+  const cap = document.createElement('figcaption');
+  cap.textContent = photo.caption;
+  if (photo.credit) {
+    const a = document.createElement('a');
+    a.href = photo.credit;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.textContent = 'photo credit & licence';
+    cap.append(' · ', a);
+  }
+  fig.append(img, cap);
+  return fig;
+}
+
+async function locate() {
+  if (!settings.showCity) return;
+  const seq = ++locateSeq;
+  const stale = () => seq !== locateSeq || !settings.showCity;
+  if (!('geolocation' in navigator)) {
+    setHere({ status: 'error', text: '📍 No location', title: "This browser can't share a location." });
+    return;
+  }
+  setHere({ status: 'locating', text: 'Finding your city…' });
+  let hit;
+  try {
+    const pos = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(
+      resolve, reject, { enableHighAccuracy: false, maximumAge: 10 * 60_000, timeout: 20_000 },
+    ));
+    const cities = await loadCities();
+    hit = nearestCity(cities, { lat: pos.coords.latitude, lon: pos.coords.longitude });
+  } catch (e) {
+    if (stale()) return;
+    const blocked = e && e.code === 1; // GeolocationPositionError.PERMISSION_DENIED
+    setHere({
+      status: 'error',
+      text: '📍 Location off',
+      title: blocked
+        ? 'Location is blocked for this site. Allow it in the browser’s site settings, or turn off “Show my city” in Settings.'
+        : 'Couldn’t get your location just now.',
+    });
+    return;
+  }
+  if (stale()) return;
+  if (!hit) {
+    setHere({ status: 'error', text: '📍 No city found', title: '' });
+    return;
+  }
+  const label = cityLabel(hit.city);
+  const own = (await loadPhotos())[label];
+  if (stale()) return;
+  setHere({
+    status: 'found',
+    text: describePlace(hit),
+    title: 'Found on this device. Your location is not sent or saved.',
+    city: hit.city,
+    label,
+    photo: own ? { src: `photos/${own.file}`, alt: own.caption || label, caption: own.caption || label, credit: null } : null,
+    noPhoto: false,
+  });
+}
+
+el.showCity.addEventListener('change', async () => {
+  settings = { ...settings, showCity: el.showCity.checked };
+  try {
+    await store.saveSettings(settings);
+  } catch (e) {
+    notice(e.message, 'error');
+  }
+  if (settings.showCity) {
+    locate(); // this click is the gesture the browser's "Allow location?" prompt answers to
+  } else {
+    locateSeq++;
+    setHere(null);
+  }
+});
+
+el.herePhotoBtn.addEventListener('click', async () => {
+  const asked = here;
+  if (!asked || asked.status !== 'found') return;
+  el.herePhotoBtn.disabled = true;
+  try {
+    const p = await fetchWikiPhoto(asked.city);
+    if (here !== asked) return;
+    if (!p) {
+      setHere({ ...asked, noPhoto: true });
+      notice(`Wikipedia has no photo for ${asked.label}.`, 'info');
+      return;
+    }
+    setHere({
+      ...asked,
+      photo: { src: p.src, alt: `Photo from the Wikipedia article ${p.article}`, caption: `From Wikipedia: ${p.article}`, credit: p.credit },
+    });
+  } catch (e) {
+    notice(`Couldn’t reach Wikipedia: ${e.message}`, 'error');
+  } finally {
+    el.herePhotoBtn.disabled = false;
+  }
+});
+
 // ---------- boot ----------
 
 async function init() {
   await handleOAuthCallback();
   settings = await store.getSettings();
+  el.showCity.checked = !!settings.showCity;
+  tickClock();
+  setInterval(tickClock, 15_000);
+  locate(); // only does anything with "Show my city" on (ADR-0007 QST-LOCATE-WHEN = C)
   conversations = await store.listConversations();
   current = (conversations[0] && (await store.loadConversation(conversations[0].id))) || newConversation();
   renderParams();

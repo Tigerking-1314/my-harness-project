@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- ADR-0002: the API key lives in this origin's localStorage, so nothing but
        this site's own scripts may run, and the page may only talk to OpenRouter
-       and (ADR-0004) Tiger's road-trip memory server. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src https://openrouter.ai https://your-first-memory-00di.onrender.com; base-uri 'none'; form-action 'none'">
+       and (ADR-0004) Tiger's road-trip memory server.
+       ADR-0007: Wikipedia, only when Tiger taps for a city photo (data from
+       en.wikipedia.org, images from Wikimedia's two image hosts; no scripts). -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: https://thumb.wikimedia.org https://upload.wikimedia.org; connect-src https://openrouter.ai https://your-first-memory-00di.onrender.com https://en.wikipedia.org; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>Tiger's Road-Trip Assistant</title>
   <link rel="stylesheet" href="style.css">
@@ -29,6 +31,15 @@
       <header class="masthead">
         <div class="sky">
           <h1 class="brand">Tiger's Road-Trip Assistant</h1>
+          <!-- ADR-0007: city (found on this device) + device-clock time + photo -->
+          <div class="here" id="here">
+            <img id="here-thumb" class="here-thumb" alt="" referrerpolicy="no-referrer" hidden>
+            <div class="here-text">
+              <div id="here-city" class="here-city" hidden></div>
+              <div id="here-time" class="here-time"></div>
+            </div>
+            <button id="here-photo-btn" class="here-btn" type="button" aria-label="Photo of this city from Wikipedia" hidden>📷<span class="here-btn-text"> Photo</span></button>
+          </div>
         </div>
         <div class="topbar">
           <button id="toggle-sidebar" class="icon" type="button" aria-label="Show conversations">☰</button>
@@ -65,6 +76,9 @@
           <div class="row">
             <button id="forget-memory" type="button">Forget address</button>
           </div>
+          <h2 class="spaced">Where you are</h2>
+          <label class="check"><input id="show-city" type="checkbox"> Show my city when the page opens</label>
+          <p class="muted small">Your city is found on this device from a built-in list. Your location is never sent anywhere or saved. A photo comes from your own set, or from Wikipedia only when you tap “📷 Photo” (Wikipedia then sees the city name). City names: <a href="https://www.geonames.org/" target="_blank" rel="noopener noreferrer">GeoNames</a>, CC BY 4.0.</p>
         </div>
         <div class="settings-group">
           <h2>This conversation</h2>

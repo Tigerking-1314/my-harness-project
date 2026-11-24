@@ -22,6 +22,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   temperature: null, // null = provider default
   maxTokens: null,
   roadtrip: false, // road-trip assistant mode (ADR-0004)
+  showCity: false, // read location on open for the header city (ADR-0007); the city itself is never stored
 });
 
 export class StorageFullError extends Error {
