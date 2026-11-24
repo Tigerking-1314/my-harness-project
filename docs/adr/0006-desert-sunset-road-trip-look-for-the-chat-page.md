@@ -9,8 +9,8 @@ adr teaching map: the example is not the teaching — these are the up-links fro
 # Desert-sunset road-trip look for the chat page
 
 - **Date**: 2026-11-24
-- **Iteration**: 1
-- **Status**: Draft
+- **Iteration**: 2
+- **Status**: Implemented
 - **Deciders**: Tiger Liu, Tether (Claude Opus 5.5)
 
 **TL;DR**: Restyle the chat page as "Tiger's Road-Trip Assistant" with a desert-sunset theme, using only local SVG art so the current CSP stays exactly as it is. Tiger picks one of three visual directions before anything is built.
@@ -78,14 +78,26 @@ A — Big Sunset.
 
 ## Decision
 
-*Pending QST-LOOK.*
+### Chosen: A — Big Sunset (Tiger, 2026-11-24)
+
+**What was built**:
+- **Header** (`.masthead` in `site/index.html`): a 96px sky (64px on phones) with the page title. The sky is drawn by CSS gradients for the sky and sun, with `art/mesas.svg` on top. Below it, a sand-coloured control strip. In dark mode it's a night gradient, `art/stars.svg`, a CSS-gradient moon and `art/mesas-night.svg`.
+- **Sidebar**: a red-rock gradient with `art/strata.svg` on top. Light text, a sand-coloured "+ New chat" button, and a gold edge on the active conversation.
+- **Background**: sand with `art/topo.svg` contours (`art/topo-night.svg` on dark umber). The rings scale around drifting points, so they read as slopes, not bullseyes. That was the first draft's problem, caught in a screenshot.
+- **Empty state** (`renderMessages()` in `site/app.js`): `art/road.svg` (an S-bend road with a dashed centre line, running to a sun on the horizon). A `<picture>` swaps in `art/road-night.svg` in dark mode. Under it: "Where to next?" and a one-line hint.
+- **Badge**: `#roadtrip-badge` (a sunset-gradient pill with `art/pin.svg`) shows exactly when the current conversation's road-trip switch is on. It's set in `renderParams()` and in the switch's change handler.
+- **Name**: `<title>`, the header `h1`, and `APP_TITLE`, which is also the `X-Title` OpenRouter shows.
+- **CSP**: unchanged, byte for byte. The art is 9 local SVG files under `site/art/`, used through `img-src 'self'`. No `style=` attributes, no web fonts: the serif is a system stack (Iowan Old Style / Palatino / Georgia).
+
+**Trade-offs accepted**: The header takes 96px of height on desktop. That's the cost of A over B, and why it shrinks to 64px on phones.
 
 ---
 
 ## Action Items
 
-- [ ] Answer QST-LOOK - Owner: Tiger Liu
-- [ ] Build the chosen direction, check light and dark in a browser (`just serve`), run the gate, push - Owner: Tether
+- [x] Answer QST-LOOK - Owner: Tiger Liu
+- [x] Build the chosen direction, check light and dark in a browser, run the gate, push - Owner: Tether. Checked with headless-Chrome screenshots at 1280px, light and dark, plus the badge forced on in a scratch copy.
+- [ ] Tiger's eye on a real phone. Headless Chrome won't lay out narrower than ~500px, so the 390px phone view isn't confirmed - Owner: Tiger Liu
 
 ---
 
@@ -96,6 +108,12 @@ A — Big Sunset.
 - Contributors: Tiger Liu, Tether (Claude Opus 5.5)
 - Changes: Three directions laid out under QST-LOOK, with a recommendation
 - Outcome: Draft; building waits on Tiger's pick
+
+### Iteration 2 (2026-11-24)
+- Trigger: Tiger answered QST-LOOK: A
+- Contributors: Tiger Liu, Tether (Claude Opus 5.5)
+- Changes: Built A (see Decision). Screenshots caught two first-draft problems: the topo texture read as bullseyes, and the road as a shark fin. Both were redrawn. Gate: all 61 tracked tests pass. The shared worktree's untracked `tests/geo.test.js` (ADR-0005 work in progress, its `site/geo.js` not written yet) still fails on its own. It is left untouched and is not part of this push.
+- Outcome: Draft → Implemented; pushed to `main` (deploys to Pages)
 
 ---
 
