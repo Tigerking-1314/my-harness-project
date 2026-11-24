@@ -9,8 +9,8 @@ adr teaching map: the example is not the teaching — these are the up-links fro
 # Welcome card: current city, local time, and a landmark photo
 
 - **Date**: 2026-11-24
-- **Iteration**: 1
-- **Status**: Draft
+- **Iteration**: 2
+- **Status**: Accepted
 - **Deciders**: Tiger Liu, Tether (Claude Opus 5.5)
 
 **TL;DR**: When the page opens, show your current city (worked out on your device from a bundled city list), the time from your device clock, and a landmark photo for that city. Your coordinates never leave the device. Three questions decide when location is read, how detailed the city list is, and where photos come from.
@@ -61,7 +61,7 @@ adr teaching map: the example is not the teaching — these are the up-links fro
 ## Questions
 
 ### QST-LOCATE-WHEN: When does the page read your location?
-- Status: unanswered
+- Status: answered
 - Why asking: ADR-0005 has a fixed rule: location is read "only when you tap a 📍 button… never in the background". You've now asked for the city to appear when the page opens. Once you've allowed location, the browser remembers that and stops asking, so "on open" means the page reads your location every time you open it, with no tap. Nothing leaves the device for the city itself, but it does relax ADR-0005's rule, so it's your call.
 - Need: pick a letter (or override — any shape answers)
 
@@ -74,13 +74,13 @@ Options:
 
 **A — Tap once, then automatic.** *Rationale*: A is what you asked for: the city is there "when I open the page", "only after I allow it". The browser's permission is exactly that allow, and asking for it only after a tap avoids a prompt the moment the page loads, which browsers discourage. The exception it makes to ADR-0005 is narrow: what ADR-0005 protects against is location *leaving* or being *kept*, and A does neither. B honours the old rule at the cost of the feature. C adds a second off switch that duplicates the browser's. *Confidence*: 0.7 — because the privacy reasoning holds, but "never in the background" may matter to you as a principle, not just for its effects. *If wrong*: if reading location without a tap feels wrong even though nothing leaves the device, choose **B**. If you want an in-page off switch, choose **C**.
 
-**ANS:** (by Tiger Liu)
-[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+**ANS:** (by Tiger Liu, 2026-11-24)
+C — A switch in Settings, "Show my city when the page opens", off by default.
 
 ---
 
 ### QST-CITY-LIST: How detailed should the bundled city list be?
-- Status: unanswered
+- Status: answered
 - Why asking: The list decides which "nearest city" you see. Small towns make it more accurate on back roads, but the file gets bigger. It downloads once, only after you allow location, then comes from the browser cache. Your trips so far are in the US (Big Sur, Zion, Route 66), but the page itself isn't US-only. Measured 2026-11-24 from GeoNames files, with each place stored as name, region and coordinates:
 - Need: pick a letter (or override — any shape answers)
 
@@ -94,13 +94,13 @@ Options:
 
 **C — US towns plus world cities.** *Rationale*: The numbers above show A naming a city 84–95 km away at two of four real road-trip spots. B and C cut that to 25–55 km. C keeps working abroad for about 385 KB more than B, downloaded once and only after you allow location. D's 2 MB buys little on US roads beyond C. Even D misses Seligman (population ~450): the nearest town over 1,000 is still Peach Springs. *Confidence*: 0.65 — because the sizes and distances are measured, but how much you travel outside the US is your call. *If wrong*: if you only ever road-trip in the US, take **B** (smallest). If ~400 KB matters less to you than simplicity, **A** is the plain worldwide list.
 
-**ANS:** (by Tiger Liu)
-[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+**ANS:** (by Tiger Liu, 2026-11-24)
+C — US towns over 1,000 plus world cities over 15,000.
 
 ---
 
 ### QST-PHOTO-SOURCE: Where does the landmark photo come from?
-- Status: unanswered
+- Status: answered
 - Why asking: The time and city never leave your device. The photo is the one part that may have to: any outside service asked for "a photo of Monterey" learns you're looking at Monterey. Each option below says what changes in the page's security policy (CSP, in `site/index.html`) and what Wikipedia would learn. The CSP matters because your OpenRouter key lives in this page's storage (ADR-0002). Images can't run code, so loosening `img-src` is lower-risk than anything touching scripts.
 - Need: pick a letter (or override — any shape answers)
 
@@ -124,8 +124,8 @@ Options:
 
 **D — Both, Wikipedia only on tap.** *Rationale*: D keeps ADR-0005's principle that location-revealing requests happen only when you choose them (tap-only). That principle is the reason ADR-0005 never centres the map on you: tile requests would leak your area. It also still covers every city. A and C would send a city-level "where Tiger is right now" to Wikimedia on every open, automatically. That's the same kind of leak, and keeping your coordinates on the device was meant to prevent it. B is the purest option but would show the fallback drawing in most towns on a real trip. The CSP change in A, C and D is the same: two Wikimedia hosts, images and data only, no scripts. *Confidence*: 0.6 — because how much a city-level log at Wikimedia matters to you is a values call, and the lead-image quality (the Monterey school) may make Wikipedia feel not worth even a tap. *If wrong*: if a city-level log at Wikimedia doesn't bother you and you want the photo to just appear, choose **C**. If the Wikipedia images disappoint, choose **B** and keep the CSP unchanged.
 
-**ANS:** (by Tiger Liu)
-[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+**ANS:** (by Tiger Liu, 2026-11-24)
+D — My bundled photo first; otherwise Wikipedia, only when I tap.
 
 ---
 
@@ -147,13 +147,21 @@ Options:
 
 ## Decision
 
-*Pending QST-LOCATE-WHEN, QST-CITY-LIST, QST-PHOTO-SOURCE.*
+*Accepted 2026-11-24 (Tiger Liu): C Settings switch · C US towns + world cities · D bundled photo first, Wikipedia only on tap.*
+
+**Build shape**:
+- **Switch**: Settings → "Show my city when the page opens" (`settings.showCity`, default `false`). It's a preference, not a location: the switch is saved, the city never is. Turning it on reads location right away; that tap is what brings up the browser's prompt. While it's on, every open reads location once. While it's off, the header shows only the clock, and the page never calls the Geolocation API.
+- **Amends ADR-0005's "tap-only" rule** for this one case: with the switch on, the on-screen city is read without a 📍 tap. It still never leaves the device and is never stored. The 📍 note to the *model* (ADR-0005) stays tap-only.
+- **Header** (right side of the sky): the city ("near Monterey, CA · 38 km" past 10 km) over the device-clock time. Plus a small round photo when one is showing. **Changed from the iteration-1 assumption**: the page opens on your most recent conversation (`init()` in `site/app.js`), so a photo shown only in an empty chat would usually not be seen "when I open the page". The header thumbnail fixes that. The empty chat shows the same photo large, in place of the road drawing.
+- **Photo**: `site/photos.js` maps a city label ("Monterey, CA") to a file under `site/photos/`. No match → a "📷 Photo of Monterey, CA" button. Tapping it makes one Wikipedia request (`en.wikipedia.org/w/api.php`, `prop=pageimages`, free images only, 800px). The image comes from `upload.wikimedia.org` with `referrerpolicy="no-referrer"` and a credit link to its file page. The result is kept in memory for the open page only.
+- **CSP**: `connect-src` + `https://en.wikipedia.org`; `img-src` + `https://upload.wikimedia.org`. `script-src` is unchanged.
+- **City list**: `site/cities.js` (an ES module, loaded with `import()` only when the switch is on), generated by `scripts/build-cities.py` from GeoNames `cities1000` (US rows) + `cities15000` (other countries). Labels are "Name, ST" in the US and "Name, CC" elsewhere. A GeoNames credit sits next to the switch.
 
 ---
 
 ## Action Items
 
-- [ ] Answer the three questions; check the fixed rules - Owner: Tiger Liu
+- [x] Answer the three questions; check the fixed rules - Owner: Tiger Liu
 - [ ] Build, tests first (nearest city, "near X · N km" wording, location never stored or exported) - Owner: Tether
 - [ ] If B/C/D: Tiger supplies the photos (own or freely licensed) - Owner: Tiger Liu
 
@@ -166,6 +174,12 @@ Options:
 - Contributors: Tiger Liu, Tether (Claude Opus 5.5)
 - Changes: Measured the GeoNames list sizes and road-trip distances; checked Wikipedia's API (CORS, lead image); three questions with recommendations
 - Outcome: Draft; the build waits on answers
+
+### Iteration 2 (2026-11-24)
+- Trigger: Tiger answered C, C, D
+- Contributors: Tiger Liu, Tether (Claude Opus 5.5)
+- Changes: Decision written. The photo moved into the header too, because the page opens on the last conversation. ADR-0005's tap-only rule amended for the on-screen city when the switch is on.
+- Outcome: Draft → Accepted; build next
 
 ---
 

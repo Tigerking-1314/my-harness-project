@@ -39,7 +39,7 @@ adr teaching map: the example is not the teaching — these are the up-links fro
 
 - **Save only when I click** (carried over from ADR-0004 QST-SAVE-OK). Coordinates, pins, and "save the place I'm at now" all go through the Save card. The card now also shows *where* the place is, so you can catch "wrong Springfield" before it's saved.
 - **Location is private**, which in this design means:
-  - read **only when you tap a 📍 button** for one message, never in the background;
+  - read **only when you tap a 📍 button** for one message, never in the background; *(one exception, 2026-11-24, ADR-0007 QST-LOCATE-WHEN: with the "Show my city" switch on, the on-screen city is read when the page opens. It is still never sent or stored.)*
   - **never stored**: not in localStorage, not in the saved conversation, not in exports, not on the memory server;
   - **never put inside a chat message**. If location context goes to the model at all, it rides along as a one-time note that is not saved in the history. (Otherwise it would be stored in the chat and resent with every later message.)
   - **"Near me" is worked out in your browser**: the page fetches your favorites with their coordinates and measures distances on your device. So the memory server needs **no** "favorites near (lat, lon)" tool, because that tool would mean sending your location to the server.
