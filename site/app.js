@@ -35,7 +35,10 @@ const el = {
   memoryState: $('memory-state'), memoryForm: $('memory-form'), memoryUrl: $('memory-url'),
   forgetMemory: $('forget-memory'), roadtrip: $('roadtrip'), roadtripBadge: $('roadtrip-badge'),
   showCity: $('show-city'), hereCity: $('here-city'), hereTime: $('here-time'),
-  hereThumb: $('here-thumb'), herePhotoBtn: $('here-photo-btn'),
+  hereThumb: $('here-thumb'), hereThumbBtn: $('here-thumb-btn'), herePhotoBtn: $('here-photo-btn'),
+  chat: $('chat'), chatBg: $('chat-bg'), chatBgImg: $('chat-bg-img'), photoBg: $('photo-bg'),
+  photoView: $('photo-view'), photoViewImg: $('photo-view-img'), photoViewPlace: $('photo-view-place'),
+  photoViewCaption: $('photo-view-caption'), photoViewCredit: $('photo-view-credit'), photoViewClose: $('photo-view-close'),
 };
 
 const store = createStore(window.localStorage);
@@ -166,30 +169,25 @@ function renderMessage(m) {
 
 function renderMessages() {
   if (!current.messages.length) {
-    // ADR-0006: the dashed-road empty state (night road in dark mode);
-    // ADR-0007: the city's landmark photo takes its place when there is one.
+    // ADR-0006: the dashed-road empty state (night road in dark mode).
+    // (The city photo is the chat background now, ADR-0007 iteration 4, not a card here.)
     const empty = document.createElement('div');
     empty.className = 'empty';
-    if (here && here.photo) {
-      empty.append(renderPhotoFigure(here.photo));
-    } else {
-      const pic = document.createElement('picture');
-      const night = document.createElement('source');
-      night.media = '(prefers-color-scheme: dark)';
-      night.srcset = 'art/road-night.svg';
-      const img = document.createElement('img');
-      img.src = 'art/road.svg';
-      img.alt = '';
-      img.width = 320;
-      img.height = 200;
-      pic.append(night, img);
-      empty.append(pic);
-    }
+    const pic = document.createElement('picture');
+    const night = document.createElement('source');
+    night.media = '(prefers-color-scheme: dark)';
+    night.srcset = 'art/road-night.svg';
+    const img = document.createElement('img');
+    img.src = 'art/road.svg';
+    img.alt = '';
+    img.width = 320;
+    img.height = 200;
+    pic.append(night, img);
     const heading = document.createElement('h2');
     heading.textContent = 'Where to next?';
     const hint = document.createElement('p');
     hint.textContent = 'Ask about routes, stops, or places you loved. Pick any OpenRouter model above.';
-    empty.append(heading, hint);
+    empty.append(pic, heading, hint);
     el.messages.replaceChildren(empty);
   } else {
     el.messages.replaceChildren(...current.messages.map(renderMessage).filter(Boolean));
@@ -680,7 +678,6 @@ function tickClock() {
 function setHere(next) {
   here = next;
   renderHere();
-  if (current && !current.messages.length) renderMessages();
 }
 
 function renderHere() {
@@ -689,39 +686,40 @@ function renderHere() {
   el.hereCity.textContent = show ? here.text : '';
   el.hereCity.title = show ? here.title || '' : '';
   const photo = show ? here.photo : null;
-  el.hereThumb.hidden = !photo;
+  el.hereThumbBtn.hidden = !photo;
   if (photo) {
     el.hereThumb.src = photo.src;
     el.hereThumb.alt = photo.alt;
-    el.hereThumb.title = photo.caption;
+    el.hereThumbBtn.title = `${photo.caption} (tap to see it large)`;
   } else {
     el.hereThumb.removeAttribute('src');
+    if (el.photoView.open) el.photoView.close();
+  }
+  // Photo background (ADR-0007 iteration 4): blurred + veiled by CSS; bubbles are solid.
+  const bg = !!(photo && settings.photoBackground);
+  el.chatBg.hidden = !bg;
+  el.chat.classList.toggle('has-photo', bg);
+  if (bg) {
+    if (el.chatBgImg.getAttribute('src') !== photo.src) el.chatBgImg.src = photo.src;
+  } else {
+    el.chatBgImg.removeAttribute('src');
   }
   const canAsk = show && here.status === 'found' && !here.photo && !here.noPhoto;
   el.herePhotoBtn.hidden = !canAsk;
   if (canAsk) el.herePhotoBtn.title = `Ask Wikipedia for a photo of ${here.label}. Wikipedia will see the city name.`;
 }
 
-function renderPhotoFigure(photo) {
-  const fig = document.createElement('figure');
-  fig.className = 'empty-photo';
-  const img = document.createElement('img');
-  img.referrerPolicy = 'no-referrer';
-  img.decoding = 'async';
-  img.src = photo.src;
-  img.alt = photo.alt;
-  const cap = document.createElement('figcaption');
-  cap.textContent = photo.caption;
-  if (photo.credit) {
-    const a = document.createElement('a');
-    a.href = photo.credit;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    a.textContent = 'photo credit & licence';
-    cap.append(' · ', a);
-  }
-  fig.append(img, cap);
-  return fig;
+function openPhotoView() {
+  const photo = here && here.photo;
+  if (!photo) return;
+  el.photoViewImg.src = photo.src;
+  el.photoViewImg.alt = photo.alt;
+  el.photoViewPlace.textContent = here.label;
+  el.photoViewCaption.textContent = photo.caption;
+  el.photoViewCredit.hidden = !photo.credit;
+  if (photo.credit) el.photoViewCredit.href = photo.credit;
+  else el.photoViewCredit.removeAttribute('href');
+  el.photoView.showModal();
 }
 
 async function locate() {
@@ -786,6 +784,22 @@ el.showCity.addEventListener('change', async () => {
   }
 });
 
+el.photoBg.addEventListener('change', async () => {
+  settings = { ...settings, photoBackground: el.photoBg.checked };
+  try {
+    await store.saveSettings(settings);
+  } catch (e) {
+    notice(e.message, 'error');
+  }
+  renderHere();
+});
+
+el.hereThumbBtn.addEventListener('click', openPhotoView);
+el.photoViewClose.addEventListener('click', () => el.photoView.close());
+el.photoView.addEventListener('click', (e) => {
+  if (e.target === el.photoView) el.photoView.close(); // a tap on the dimmed backdrop closes it
+});
+
 el.herePhotoBtn.addEventListener('click', async () => {
   const asked = here;
   if (!asked || asked.status !== 'found') return;
@@ -815,6 +829,7 @@ async function init() {
   await handleOAuthCallback();
   settings = await store.getSettings();
   el.showCity.checked = !!settings.showCity;
+  el.photoBg.checked = !!settings.photoBackground;
   tickClock();
   setInterval(tickClock, 15_000);
   locate(); // only does anything with "Show my city" on (ADR-0007 QST-LOCATE-WHEN = C)

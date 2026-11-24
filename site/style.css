@@ -12,6 +12,9 @@
   --error: #a3200f;
   --ok: #2f6b2a;
   --code-bg: #e9d4b0;
+  --bubble: #fcf5e8;        /* assistant bubble: solid, so text never sits on the photo */
+  /* ADR-0007 iteration 4: translucent sand over the blurred city photo */
+  --photo-veil: linear-gradient(180deg, rgba(244, 230, 204, .66) 0%, rgba(244, 230, 204, .78) 100%);
   --topo: url("art/topo.svg");
   --rock: linear-gradient(180deg, #9a4322 0%, #6a2814 60%, #4d1c0f 100%);
   --rock-text: #fbe8cf;
@@ -37,7 +40,10 @@
     --user-bg: #3a2a20;
     --error: #ff8a80;
     --ok: #8fcf86;
-    --code-bg: #2d231c;
+    --code-bg: #3d2f25;     /* lighter than --bubble, or inline code vanishes inside a reply */
+    --bubble: #2a2019;
+    /* desert night: indigo sky fading to umber ground */
+    --photo-veil: linear-gradient(180deg, rgba(7, 10, 36, .74) 0%, rgba(26, 29, 74, .70) 45%, rgba(31, 24, 19, .82) 100%);
     --topo: url("art/topo-night.svg");
     --rock: linear-gradient(180deg, #4a1e12 0%, #34140b 60%, #240d07 100%);
     --rock-text: #f3dcc0;
@@ -48,7 +54,7 @@
       linear-gradient(180deg, #070a24 0%, #1a1d4a 55%, #3a2752 100%);
     --sky-mobile:
       url("art/mesas-night.svg") bottom / 100% 30px no-repeat,
-      radial-gradient(circle at 58% 22px, #f4f1e3 0 7px, rgba(244, 241, 227, .22) 9px, transparent 24px),
+      radial-gradient(circle at 50% 40px, #f4f1e3 0 7px, rgba(244, 241, 227, .22) 9px, transparent 24px),
       url("art/stars.svg") top left / 220px 96px repeat,
       linear-gradient(180deg, #070a24 0%, #1a1d4a 55%, #3a2752 100%);
   }
@@ -119,7 +125,16 @@ textarea { resize: vertical; width: 100%; }
 .sidebar-foot { display: flex; gap: 8px; }
 .sidebar-foot > * { flex: 1; text-align: center; }
 
-.chat { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.chat { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; isolation: isolate; }
+/* city photo behind the whole chat area (ADR-0007 iteration 4): blurred, dimmed, veiled */
+.chat-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.chat-bg img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  filter: blur(14px) saturate(.85) brightness(.9);
+  transform: scale(1.12); /* hide the blur's soft, see-through edges */
+}
+.chat-bg::after { content: ""; position: absolute; inset: 0; background: var(--photo-veil); }
+.chat > :not(.chat-bg) { position: relative; z-index: 1; }
 /* sunset sky + mesas header (ADR-0006) */
 .masthead { flex: none; }
 .sky {
@@ -133,24 +148,39 @@ textarea { resize: vertical; width: 100%; }
 .here-text { text-align: right; min-width: 0; }
 .here-city { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 34vw; }
 .here-time { font-size: 13px; opacity: .92; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.here-thumb-btn { order: 2; flex: none; padding: 0; border: none; background: none; border-radius: 50%; }
 .here-thumb {
-  order: 2; width: 52px; height: 52px; flex: none; object-fit: cover;
+  display: block; width: 52px; height: 52px; object-fit: cover;
   border-radius: 50%; border: 2px solid rgba(255, 248, 236, .85);
   box-shadow: 0 2px 6px rgba(30, 10, 30, .35);
 }
+.here-thumb-btn:hover .here-thumb { border-color: #fff8ec; }
 .here-btn {
   order: 2; font-size: 12px; padding: 3px 9px; border-radius: 999px; white-space: nowrap;
   color: #fff8ec; background: rgba(30, 10, 40, .28); border-color: rgba(255, 248, 236, .45);
 }
 .here-btn:hover { border-color: #fff8ec; }
 .sky :focus-visible { outline-color: #fff8ec; }
-.empty-photo { margin: 0 auto; max-width: min(560px, 100%); }
-.empty-photo img {
-  display: block; width: 100%; max-height: 38vh; object-fit: cover;
-  border-radius: 14px; box-shadow: 0 6px 18px rgba(43, 29, 20, .25);
+/* the photo, large (tap the header circle) */
+.photo-view {
+  padding: 0; border: none; border-radius: 16px; overflow: hidden;
+  width: min(920px, calc(100vw - 24px)); max-height: calc(100vh - 24px);
+  background: var(--bubble); color: var(--text);
+  box-shadow: 0 18px 50px rgba(20, 8, 4, .45);
 }
-.empty-photo figcaption { margin-top: 6px; font-size: 12px; }
-.empty-photo figcaption a { color: var(--accent); }
+.photo-view::backdrop { background: rgba(20, 10, 18, .72); }
+.photo-view figure { margin: 0; }
+.photo-view img { display: block; width: 100%; max-height: calc(100vh - 140px); object-fit: contain; background: #120d0a; }
+.photo-view figcaption { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 12px 16px 14px; font-size: 13px; color: var(--muted); }
+.photo-view figcaption strong {
+  color: var(--text); font: 600 20px/1.2 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+}
+.photo-view figcaption a { color: var(--accent); margin-left: auto; }
+.photo-view-close {
+  position: absolute; top: 10px; right: 10px; z-index: 1;
+  width: 34px; height: 34px; padding: 0; border-radius: 50%;
+  color: #fff8ec; background: rgba(20, 10, 18, .55); border-color: rgba(255, 248, 236, .5);
+}
 .brand {
   margin: 0;
   font: 600 24px/1.2 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
@@ -213,7 +243,11 @@ details summary { cursor: pointer; font-size: 13px; color: var(--muted); margin-
   background: var(--user-bg); padding: 8px 12px; border-radius: 12px;
   white-space: pre-wrap; overflow-wrap: anywhere;
 }
-.msg.assistant .body { overflow-wrap: anywhere; }
+.msg.assistant .body {
+  overflow-wrap: anywhere;
+  background: var(--bubble); border: 1px solid var(--border);
+  padding: 10px 14px; border-radius: 12px;
+}
 .msg.assistant .body:empty::after { content: "…"; color: var(--muted); }
 .body p { margin: 0 0 .7em; }
 .body p:last-child { margin-bottom: 0; }
@@ -223,6 +257,12 @@ details summary { cursor: pointer; font-size: 13px; color: var(--muted); margin-
 .body a { color: var(--accent); }
 .meta { font-size: 12px; color: var(--muted); margin-top: 4px; }
 .msg-error { font-size: 13px; color: var(--error); margin-top: 4px; }
+/* Over the photo, small loose text gets a solid chip too (ADR-0007 iteration 4) */
+.has-photo .meta, .has-photo .msg-error, .has-photo .tool-note {
+  align-self: flex-start; background: var(--bubble); padding: 2px 9px; border-radius: 8px;
+}
+.has-photo .msg.user .meta { align-self: flex-end; }
+.has-photo .empty { background: var(--bubble); border: 1px solid var(--border); border-radius: 16px; padding: 18px 16px 20px; max-width: 520px; }
 
 .settings h2.spaced { margin-top: 18px; }
 .settings label.check { display: flex; gap: 8px; align-items: flex-start; color: var(--text); margin-bottom: 10px; }
@@ -240,7 +280,7 @@ details summary { cursor: pointer; font-size: 13px; color: var(--muted); margin-
 .confirm-card dt { color: var(--muted); font-size: 13px; }
 .confirm-card dd { margin: 0; overflow-wrap: anywhere; }
 
-.notice { max-width: 780px; margin: 0 auto 8px; padding: 6px 12px; border-radius: 8px; font-size: 13px; width: calc(100% - 32px); }
+.notice { max-width: 780px; margin: 0 auto 8px; padding: 6px 12px; border-radius: 8px; font-size: 13px; width: calc(100% - 32px); background: var(--bubble); }
 .notice.error { color: var(--error); border: 1px solid var(--error); }
 .notice.ok { color: var(--ok); border: 1px solid var(--ok); }
 .notice.info { color: var(--muted); border: 1px solid var(--border); }
@@ -260,6 +300,8 @@ details summary { cursor: pointer; font-size: 13px; color: var(--muted); margin-
   .brand { font-size: 16px; }
   .here { gap: 6px; }
   .here-thumb { width: 36px; height: 36px; }
+  .photo-view figcaption strong { font-size: 17px; }
+  .photo-view figcaption a { margin-left: 0; }
   .here-city { font-size: 12px; max-width: 44vw; }
   .here-btn-text { display: none; }
   .here-btn { padding: 3px 7px; }

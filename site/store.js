@@ -23,6 +23,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   maxTokens: null,
   roadtrip: false, // road-trip assistant mode (ADR-0004)
   showCity: false, // read location on open for the header city (ADR-0007); the city itself is never stored
+  photoBackground: true, // the city photo behind the chat area (ADR-0007 iteration 4)
 });
 
 export class StorageFullError extends Error {
