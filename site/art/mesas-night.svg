@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="60" viewBox="0 0 1200 60" preserveAspectRatio="none">
+  <!-- ADR-0006: the header mesas under a night sky (dark mode). -->
+  <path fill="#2a2a55" d="M0 60 V38 L60 36 L80 22 L170 22 L190 34 L300 32 L330 14 L420 14 L440 30 L560 34 L600 26 L700 26 L720 36 L860 34 L890 18 L960 16 L990 30 L1100 32 L1130 24 L1200 24 V60Z"/>
+  <path fill="#120d1c" d="M0 60 V46 L120 44 L140 34 L230 33 L250 44 L380 46 L520 44 L540 30 L560 28 L640 28 L660 42 L780 46 L900 44 L930 36 L1010 35 L1030 46 L1200 46 V60Z"/>
+</svg>

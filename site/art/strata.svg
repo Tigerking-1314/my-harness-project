@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="120" viewBox="0 0 260 120">
+  <!-- ADR-0006: sandstone strata over the red-rock sidebar. Tiles in both directions. -->
+  <path fill="#000" fill-opacity=".08" d="M0 72 C70 66 190 78 260 72 V86 C190 92 70 80 0 86Z"/>
+  <g fill="none" stroke="#fff" stroke-opacity=".08" stroke-width="1.2">
+    <path d="M0 18 C80 12 180 26 260 18"/>
+    <path d="M0 46 C90 52 170 40 260 46"/>
+    <path d="M0 108 C100 102 160 114 260 108"/>
+  </g>
+</svg>

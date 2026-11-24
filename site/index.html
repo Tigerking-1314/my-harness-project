@@ -8,7 +8,7 @@
        and (ADR-0004) Tiger's road-trip memory server. -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src https://openrouter.ai https://your-first-memory-00di.onrender.com; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <title>Chat Harness</title>
+  <title>Tiger's Road-Trip Assistant</title>
   <link rel="stylesheet" href="style.css">
   <script type="module" src="app.js"></script>
 </head>
@@ -25,12 +25,19 @@
     </aside>
 
     <main class="chat">
-      <header class="topbar">
-        <button id="toggle-sidebar" class="icon" type="button" aria-label="Show conversations">☰</button>
-        <input id="model" class="model" list="model-list" spellcheck="false" autocomplete="off" aria-label="Model" placeholder="model id, e.g. openrouter/auto">
-        <datalist id="model-list"></datalist>
-        <button id="toggle-settings" type="button" aria-expanded="false" aria-controls="settings">Settings</button>
-        <span id="key-badge" class="badge"></span>
+      <!-- ADR-0006: sunset sky + mesas (all art is local SVG under art/, per the CSP above) -->
+      <header class="masthead">
+        <div class="sky">
+          <h1 class="brand">Tiger's Road-Trip Assistant</h1>
+        </div>
+        <div class="topbar">
+          <button id="toggle-sidebar" class="icon" type="button" aria-label="Show conversations">☰</button>
+          <input id="model" class="model" list="model-list" spellcheck="false" autocomplete="off" aria-label="Model" placeholder="model id, e.g. openrouter/auto">
+          <datalist id="model-list"></datalist>
+          <button id="toggle-settings" type="button" aria-expanded="false" aria-controls="settings">Settings</button>
+          <span id="roadtrip-badge" class="rt-badge" hidden>Road-trip mode</span>
+          <span id="key-badge" class="badge"></span>
+        </div>
       </header>
 
       <section id="settings" class="settings" hidden>

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="12" height="16" viewBox="0 0 12 16">
+  <!-- ADR-0006: map pin on the "Road-trip mode" badge. -->
+  <path fill="#3d1a17" d="M6 0 C2.7 0 0 2.6 0 5.9 C0 10.2 6 16 6 16 C6 16 12 10.2 12 5.9 C12 2.6 9.3 0 6 0Z"/>
+  <circle cx="6" cy="6" r="2.2" fill="#f6c15c"/>
+</svg>

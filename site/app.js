@@ -13,7 +13,7 @@ import {
   accumulateToolCall, finalizeToolCalls, parseArgs, historyForApi,
 } from './tools.js';
 
-const APP_TITLE = 'Chat Harness';
+const APP_TITLE = "Tiger's Road-Trip Assistant"; // ADR-0006; also the X-Title OpenRouter shows
 const PKCE_KEY = 'harness:v1:pkce'; // sessionStorage: survives the OpenRouter redirect, dies with the tab
 const NEW_TITLE = 'New chat';
 // Must match the CSP connect-src in index.html (ADR-0004).
@@ -31,7 +31,7 @@ const el = {
   messages: $('messages'), notice: $('notice'),
   composer: $('composer'), input: $('input'), send: $('send'), stop: $('stop'),
   memoryState: $('memory-state'), memoryForm: $('memory-form'), memoryUrl: $('memory-url'),
-  forgetMemory: $('forget-memory'), roadtrip: $('roadtrip'),
+  forgetMemory: $('forget-memory'), roadtrip: $('roadtrip'), roadtripBadge: $('roadtrip-badge'),
 };
 
 const store = createStore(window.localStorage);
@@ -159,9 +159,24 @@ function renderMessage(m) {
 
 function renderMessages() {
   if (!current.messages.length) {
-    const empty = document.createElement('p');
+    // ADR-0006: the dashed-road empty state (night road in dark mode).
+    const empty = document.createElement('div');
     empty.className = 'empty';
-    empty.textContent = 'Start a conversation. Pick any OpenRouter model above.';
+    const pic = document.createElement('picture');
+    const night = document.createElement('source');
+    night.media = '(prefers-color-scheme: dark)';
+    night.srcset = 'art/road-night.svg';
+    const img = document.createElement('img');
+    img.src = 'art/road.svg';
+    img.alt = '';
+    img.width = 320;
+    img.height = 200;
+    pic.append(night, img);
+    const heading = document.createElement('h2');
+    heading.textContent = 'Where to next?';
+    const hint = document.createElement('p');
+    hint.textContent = 'Ask about routes, stops, or places you loved. Pick any OpenRouter model above.';
+    empty.append(pic, heading, hint);
     el.messages.replaceChildren(empty);
   } else {
     el.messages.replaceChildren(...current.messages.map(renderMessage).filter(Boolean));
@@ -175,6 +190,7 @@ function renderParams() {
   el.temperature.value = current.temperature ?? '';
   el.maxTokens.value = current.maxTokens ?? '';
   el.roadtrip.checked = !!current.roadtrip;
+  el.roadtripBadge.hidden = !current.roadtrip;
 }
 
 async function renderMemoryStatus() {
@@ -526,6 +542,7 @@ el.model.addEventListener('change', () =>
 );
 el.roadtrip.addEventListener('change', async () => {
   await updateParam('roadtrip', el.roadtrip.checked);
+  el.roadtripBadge.hidden = !el.roadtrip.checked;
   if (el.roadtrip.checked && !(await store.getMemoryUrl())) {
     notice('Road-trip mode is on — now paste your memory address under Settings → Road-trip memory.', 'info');
   } else {

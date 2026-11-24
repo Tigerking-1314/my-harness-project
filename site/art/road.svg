@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200">
+  <!-- ADR-0006: the empty state, a dashed road winding toward a setting sun. -->
+  <defs>
+    <clipPath id="sky"><rect x="0" y="0" width="320" height="70"/></clipPath>
+  </defs>
+  <circle cx="175" cy="70" r="24" fill="#f2a33a" clip-path="url(#sky)"/>
+  <circle cx="175" cy="70" r="34" fill="#f6c15c" fill-opacity=".25" clip-path="url(#sky)"/>
+  <path fill="#b4553a" fill-opacity=".75" d="M30 70 L44 70 L50 58 L82 58 L88 70 Z M236 70 L246 62 L274 61 L282 70 Z"/>
+  <path fill="#c97a4a" fill-opacity=".6" d="M96 70 L104 64 L124 64 L130 70 Z"/>
+  <line x1="16" y1="70" x2="304" y2="70" stroke="#b98a5a" stroke-width="1.5" stroke-linecap="round"/>
+  <path fill="#6b4a3a" d="M90 200 C155 150 122 110 172 70 L178 70 C158 110 245 150 230 200 Z"/>
+  <path fill="none" stroke="#f6e3b8" stroke-width="3" stroke-dasharray="10 9" d="M160 200 C200 150 140 110 175 70"/>
+</svg>

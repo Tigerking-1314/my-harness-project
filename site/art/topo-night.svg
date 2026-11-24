@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="360" height="360" viewBox="0 0 360 360">
+  <!-- ADR-0006: the same contours as topo.svg, pale on dark umber for dark mode. -->
+  <defs>
+    <path id="a" vector-effect="non-scaling-stroke" d="M40 90 C60 50 130 40 170 55 C210 70 230 100 205 130 C185 155 140 150 110 160 C75 172 30 150 28 122 C26 108 32 100 40 90Z"/>
+    <path id="b" vector-effect="non-scaling-stroke" d="M250 230 C280 205 330 210 345 240 C358 268 335 300 300 305 C265 310 240 290 236 268 C233 252 240 240 250 230Z"/>
+  </defs>
+  <g fill="none" stroke="#e9c79a" stroke-opacity=".08" stroke-width="1">
+    <use xlink:href="#a" href="#a"/>
+    <use xlink:href="#a" href="#a" transform="translate(150 105) scale(.78 .74) translate(-150 -105)"/>
+    <use xlink:href="#a" href="#a" transform="translate(162 100) scale(.56 .5) translate(-162 -100)"/>
+    <use xlink:href="#a" href="#a" transform="translate(168 97) scale(.34 .3) translate(-168 -97)"/>
+    <use xlink:href="#a" href="#a" transform="translate(171 96) scale(.14 .12) translate(-171 -96)"/>
+    <use xlink:href="#b" href="#b"/>
+    <use xlink:href="#b" href="#b" transform="translate(304 262) scale(.7 .66) translate(-304 -262)"/>
+    <use xlink:href="#b" href="#b" transform="translate(300 268) scale(.42 .38) translate(-300 -268)"/>
+    <use xlink:href="#b" href="#b" transform="translate(298 271) scale(.18 .16) translate(-298 -271)"/>
+    <path d="M0 20 C80 6 160 40 240 22 C290 12 330 14 360 20"/>
+    <path d="M0 330 C70 342 150 312 230 326 C290 336 330 334 360 330"/>
+    <path d="M0 205 C40 195 90 220 130 204 C160 192 190 200 205 215"/>
+  </g>
+</svg>

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="220" height="96" viewBox="0 0 220 96">
+  <!-- ADR-0006: a tile of stars for the dark-mode desert night sky. -->
+  <g fill="#fffbe8">
+    <circle cx="12" cy="10" r="1" opacity=".9"/>
+    <circle cx="38" cy="34" r=".7" opacity=".6"/>
+    <circle cx="61" cy="8" r=".6" opacity=".7"/>
+    <circle cx="84" cy="27" r="1.2" opacity=".95"/>
+    <circle cx="107" cy="52" r=".6" opacity=".5"/>
+    <circle cx="126" cy="14" r=".8" opacity=".8"/>
+    <circle cx="149" cy="40" r=".6" opacity=".6"/>
+    <circle cx="171" cy="6" r="1" opacity=".85"/>
+    <circle cx="196" cy="29" r=".7" opacity=".7"/>
+    <circle cx="23" cy="58" r=".6" opacity=".5"/>
+    <circle cx="57" cy="70" r=".8" opacity=".55"/>
+    <circle cx="140" cy="74" r=".6" opacity=".45"/>
+    <circle cx="208" cy="62" r=".9" opacity=".6"/>
+    <circle cx="92" cy="88" r=".5" opacity=".4"/>
+  </g>
+</svg>
