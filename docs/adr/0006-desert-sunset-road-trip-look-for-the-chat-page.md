@@ -48,7 +48,7 @@ adr teaching map: the example is not the teaching — these are the up-links fro
 ## Questions
 
 ### QST-LOOK: Which desert-sunset direction should the page take?
-- Status: unanswered
+- Status: answered
 - Why asking: The look is your taste, not a technical call. All three options include every part of the brief and keep the CSP unchanged. They differ in how much screen the scenery takes and in its character.
 - Need: pick a letter (or override — any shape answers, e.g. "A but with C's empty state")
 
@@ -61,8 +61,8 @@ Options:
 
 **A — Big Sunset.** *Rationale*: A follows the brief most literally. "A sunset gradient header with a mountain silhouette" only reads as a scene with some height, and B's 56px strip turns it into a coloured bar. A's phone rule (header down to ~64px, `@media (max-width: 760px)` in `site/style.css`) keeps that height from crowding messages on small screens. C adds a strong motif (the striped sun) that you didn't ask for. *Confidence*: 0.6 — because this is a taste call I can't check against any evidence in the repo, only against the wording of the brief. *If wrong*: if you mostly use the page on your phone or in long sessions and the scenery starts to feel in the way, flip to **B**. If you want it to look like a souvenir rather than a tool, flip to **C**.
 
-**ANS:** (by Tiger Liu)
-[Fill this in]   <!-- literal placeholder — parser-significant, do not paraphrase -->
+**ANS:** (by Tiger Liu, 2026-11-24)
+A — Big Sunset.
 
 ---
 
